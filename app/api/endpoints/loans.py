@@ -9,6 +9,8 @@ from dateutil.relativedelta import relativedelta
 from app.api import deps
 from app.db.session import get_db
 from app.models.user import User, UserRole
+from app.models.customer import Customer
+from app.models.loan_product import LoanProduct, InterestMethod
 from app.models.loan import Loan, LoanStatus, Transaction, TransactionType, DisbursementMethod, Collateral
 from app.schemas.loan import LoanCreate, LoanCreateAdmin, LoanResponse, AmortizationScheduleInfo, DisbursementRequest, CRBCheckRequest, CRBCheckResponse, CollateralCreate, CollateralResponse
 from app.core import loan_engine
@@ -30,17 +32,70 @@ async def apply_for_loan(
     Customers / Agents use this to apply for a loan (Logbook, SME, etc).
     The loan remains 'pending' until evaluated by a Loan Officer / Finance team.
     """
-    # Flat rate interest depending on product - mocked at standard 5% per month for this example.
-    interest_rate = 5.0 
-    
+    normalized_type = loan_in.product_type.upper()
+    product_result = await db.execute(
+        select(LoanProduct).where(LoanProduct.type == normalized_type, LoanProduct.is_active == True)
+    )
+    product = product_result.scalars().first()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Loan product type '{loan_in.product_type}' is not active or not supported."
+        )
+
+    customer_result = await db.execute(
+        select(Customer).where(Customer.user_id == current_user.id)
+    )
+    customer = customer_result.scalars().first()
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Customer profile not found for this user. Please complete onboarding first."
+        )
+
+    if customer.blacklisted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Customer is blacklisted: {customer.blacklisted_reason or 'No reason provided'}"
+        )
+
+    if loan_in.principal_amount < product.min_amount or loan_in.principal_amount > product.max_amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Requested amount KES {loan_in.principal_amount:,.2f} is outside the allowed limits of KES {product.min_amount:,.2f} to KES {product.max_amount:,.2f} for this product."
+        )
+
+    if loan_in.principal_amount > customer.max_loan_limit:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Requested amount KES {loan_in.principal_amount:,.2f} exceeds your credit limit of KES {customer.max_loan_limit:,.2f}."
+        )
+
+    if loan_in.tenure_months < product.min_tenure_months or loan_in.tenure_months > product.max_tenure_months:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Requested tenure of {loan_in.tenure_months} months is outside the allowed limits of {product.min_tenure_months} to {product.max_tenure_months} months for this product."
+        )
+
+    import random
+    app_no = f"LAF-{random.randint(100000000, 999999999)}"
+
     db_loan = Loan(
         user_id=current_user.id,
+        customer_id=customer.id,
+        product_id=product.id,
         principal_amount=loan_in.principal_amount,
-        interest_rate=interest_rate,
+        amount_requested=loan_in.principal_amount,
+        interest_rate=product.interest_rate_monthly,
         tenure_months=loan_in.tenure_months,
-        product_type=loan_in.product_type,
+        product_type=product.type.value,
         disbursement_method=loan_in.disbursement_method,
-        status=LoanStatus.PENDING
+        status=LoanStatus.PENDING,
+        branch_id=customer.branch_id,
+        outstanding_balance=loan_in.principal_amount,
+        total_paid=0.0,
+        penalty_balance=0.0,
+        application_no=app_no
     )
     
     db.add(db_loan)
@@ -50,7 +105,7 @@ async def apply_for_loan(
         db,
         user=current_user.email,
         action="APPLY_LOAN",
-        details=f"Applied for loan ID #{db_loan.id} of KES {db_loan.principal_amount}"
+        details=f"Applied for loan ID #{db_loan.id} (App No: {db_loan.application_no}) of KES {db_loan.principal_amount}"
     )
     return db_loan
 
@@ -70,23 +125,58 @@ async def create_loan_admin(
             detail="You are not authorized to create loans."
         )
         
-    # Verify the borrower exists in the database
-    result = await db.execute(select(User).where(User.id == loan_in.borrower_id))
-    borrower = result.scalars().first()
-    if not borrower:
+    customer_result = await db.execute(
+        select(Customer).where(Customer.user_id == loan_in.borrower_id)
+    )
+    customer = customer_result.scalars().first()
+    if not customer:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Borrower with ID {loan_in.borrower_id} not found."
+            detail=f"Customer profile for borrower user ID {loan_in.borrower_id} not found."
         )
-        
+
+    normalized_type = loan_in.loan_type.upper()
+    product_result = await db.execute(
+        select(LoanProduct).where(LoanProduct.type == normalized_type, LoanProduct.is_active == True)
+    )
+    product = product_result.scalars().first()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Loan product type '{loan_in.loan_type}' is not active or not supported."
+        )
+
+    if loan_in.principal_amount < product.min_amount or loan_in.principal_amount > product.max_amount:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Amount KES {loan_in.principal_amount:,.2f} is outside the allowed limits of KES {product.min_amount:,.2f} to KES {product.max_amount:,.2f} for this product."
+        )
+
+    if loan_in.term_months < product.min_tenure_months or loan_in.term_months > product.max_tenure_months:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Tenure of {loan_in.term_months} months is outside the allowed limits of {product.min_tenure_months} to {product.max_tenure_months} months for this product."
+        )
+
+    import random
+    app_no = f"LAF-{random.randint(100000000, 999999999)}"
+
     db_loan = Loan(
         user_id=loan_in.borrower_id,
+        customer_id=customer.id,
+        product_id=product.id,
         principal_amount=loan_in.principal_amount,
+        amount_requested=loan_in.principal_amount,
         interest_rate=loan_in.interest_rate,
         tenure_months=loan_in.term_months,
-        product_type=loan_in.loan_type.lower(),
+        product_type=product.type.value,
         disbursement_method=loan_in.disbursement_method,
-        status=LoanStatus.PENDING
+        status=LoanStatus.PENDING,
+        branch_id=customer.branch_id,
+        outstanding_balance=loan_in.principal_amount,
+        total_paid=0.0,
+        penalty_balance=0.0,
+        application_no=app_no
     )
     
     db.add(db_loan)
@@ -96,7 +186,7 @@ async def create_loan_admin(
         db,
         user=current_user.email,
         action="CREATE_LOAN_ADMIN",
-        details=f"Created loan ID #{db_loan.id} for Borrower ID #{loan_in.borrower_id} of KES {db_loan.principal_amount}"
+        details=f"Created loan ID #{db_loan.id} (App No: {db_loan.application_no}) for Borrower ID #{loan_in.borrower_id} of KES {db_loan.principal_amount}"
     )
     return db_loan
 
@@ -142,7 +232,12 @@ async def approve_loan(
             detail="You are not authorized to approve loans."
         )
         
-    result = await db.execute(select(Loan).where(Loan.id == loan_id))
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Loan)
+        .options(selectinload(Loan.product), selectinload(Loan.customer))
+        .where(Loan.id == loan_id)
+    )
     loan = result.scalars().first()
     
     if not loan:
@@ -151,22 +246,57 @@ async def approve_loan(
     if loan.status != LoanStatus.PENDING:
         raise HTTPException(status_code=400, detail="Only pending loans can be approved")
         
-    # Setup repayment terms
-    schedule = loan_engine.calculate_flat_rate_schedule(
-        principal=loan.principal_amount,
-        monthly_rate_pct=loan.interest_rate,
-        months=loan.tenure_months
-    )
+    interest_method = InterestMethod.FLAT
+    if loan.product:
+        interest_method = loan.product.interest_method
+
+    if interest_method == InterestMethod.REDUCING_BALANCE:
+        schedule = loan_engine.calculate_reducing_balance_schedule(
+            principal=loan.principal_amount,
+            monthly_rate_pct=loan.interest_rate,
+            months=loan.tenure_months
+        )
+    else:
+        schedule = loan_engine.calculate_flat_rate_schedule(
+            principal=loan.principal_amount,
+            monthly_rate_pct=loan.interest_rate,
+            months=loan.tenure_months
+        )
+        
     loan.total_payable = schedule["total_payable"]
-    # Add tenure_months to current time
+    loan.outstanding_balance = schedule["total_payable"]
+    
+    from app.models.loan import RepaymentSchedule, ScheduleStatus
+    from datetime import date
+    
+    start_date = date.today()
+    for line in schedule["schedule_lines"]:
+        instalment_due_date = start_date + relativedelta(months=line["installment_no"])
+        sched_rec = RepaymentSchedule(
+            loan_id=loan.id,
+            instalment_no=line["installment_no"],
+            due_date=instalment_due_date,
+            principal_due=line["principal_due"],
+            interest_due=line["interest_due"],
+            total_due=line["total_due"],
+            amount_paid=0.0,
+            status=ScheduleStatus.PENDING
+        )
+        db.add(sched_rec)
+        
+    loan.first_due_date = start_date + relativedelta(months=1)
+    loan.final_due_date = start_date + relativedelta(months=loan.tenure_months)
     loan.due_date = datetime.now() + relativedelta(months=loan.tenure_months)
     loan.status = LoanStatus.APPROVED
     
     if loan.disbursement_method == DisbursementMethod.LUMP_SUM:
-        # Generate unique 8-character reference for bank integration
         ref = str(uuid.uuid4())[:8].upper()
-        account_target = current_user.phone_number or "0700000000" 
-        
+        account_target = "0700000000"
+        if loan.customer and loan.customer.phone:
+            account_target = loan.customer.phone
+        elif loan.user and loan.user.phone_number:
+            account_target = loan.user.phone_number
+            
         disbursement_resp = await kcb_gateway.disburse_loan(
             account_no=account_target,
             amount=loan.principal_amount,
@@ -177,6 +307,7 @@ async def approve_loan(
             loan.status = LoanStatus.DISBURSED
             loan.amount_disbursed = loan.principal_amount
             loan.kcb_reference = disbursement_resp["kcb_transaction_id"]
+            loan.disbursed_at = datetime.now()
             
             trx = Transaction(
                 loan_id=loan.id,
@@ -186,7 +317,6 @@ async def approve_loan(
             )
             db.add(trx)
             
-            # Platform fee: KES 10 per disbursement transaction
             fee_trx = Transaction(
                 loan_id=loan.id,
                 type=TransactionType.PLATFORM_FEE,
@@ -218,7 +348,12 @@ async def disburse_tranche(
     if current_user.role not in [UserRole.FINANCE, UserRole.SUPER_ADMIN]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
         
-    result = await db.execute(select(Loan).where(Loan.id == loan_id))
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Loan)
+        .options(selectinload(Loan.user), selectinload(Loan.customer))
+        .where(Loan.id == loan_id)
+    )
     loan = result.scalars().first()
     
     if not loan:
@@ -234,8 +369,13 @@ async def disburse_tranche(
         raise HTTPException(status_code=400, detail="Cannot disburse more than the approved principal amount")
         
     ref = str(uuid.uuid4())[:8].upper()
-    account_target = loan.user.phone_number if loan.user else "0700000000"
     
+    account_target = "0700000000"
+    if loan.customer and loan.customer.phone:
+        account_target = loan.customer.phone
+    elif loan.user and loan.user.phone_number:
+        account_target = loan.user.phone_number
+        
     # Process through KCB integration
     disbursement_resp = await kcb_gateway.disburse_loan(
         account_no=account_target,

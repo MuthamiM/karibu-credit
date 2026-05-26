@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 import logging
 
 from app.db.session import get_db
-from app.models.loan import Loan, LoanStatus, Transaction, TransactionType
+from app.models.loan import Loan, LoanStatus, Transaction, TransactionType, Payment, PaymentSource, PaymentStatus
 from app.integrations.mpesa import DarajaGateway
+from app.core import loan_engine
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -35,10 +37,32 @@ async def mpesa_confirmation(request: Request, db: AsyncSession = Depends(get_db
         
     loan_id = int(loan_id_str)
     
-    result = await db.execute(select(Loan).where(Loan.id == loan_id))
+    result = await db.execute(
+        select(Loan)
+        .options(selectinload(Loan.repayment_schedules))
+        .where(Loan.id == loan_id)
+    )
     loan = result.scalars().first()
     
     if loan:
+        # Allocate repayment to schedules, penalties, etc.
+        principal_portion, interest_portion, fees_portion = loan_engine.allocate_repayment(loan, parsed["amount"])
+        
+        # Create detailed Payment record
+        payment_record = Payment(
+            loan_id=loan.id,
+            customer_id=loan.customer_id or 1, # fallback to 1 if not linked
+            amount=parsed["amount"],
+            principal_portion=principal_portion,
+            interest_portion=interest_portion,
+            fees_portion=fees_portion,
+            mpesa_ref=parsed["receipt"],
+            source=PaymentSource.MPESA_C2B,
+            status=PaymentStatus.CONFIRMED
+        )
+        db.add(payment_record)
+        
+        # Legacy transaction logging
         trx = Transaction(
             loan_id=loan.id,
             type=TransactionType.REPAYMENT,
@@ -55,13 +79,6 @@ async def mpesa_confirmation(request: Request, db: AsyncSession = Depends(get_db
             reference_code=f"FEE-{parsed['receipt']}"
         )
         db.add(fee_trx)
-        
-        # Update loan outstanding balance
-        loan.total_paid += parsed["amount"]
-        
-        target_amount = (loan.total_payable or 0.0) + loan.penalty_balance
-        if loan.total_paid >= target_amount:
-            loan.status = LoanStatus.CLEARED
         
         await db.commit()
         
