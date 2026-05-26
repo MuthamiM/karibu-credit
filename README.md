@@ -1,54 +1,63 @@
-# Karibu Credit Backend 🚀
+# Karibu Credit — Loan Distribution Platform
 
-This is the backend system for the Karibu Credit loan distribution platform. It is built using Python, FastAPI, and PostgreSQL to ensure speed, security, and scalability.
+A modern, secure, and clean web application for managing loan disbursements, borrower onboarding, risk management (CRB checks), collateral tracking, and automated late-payment penalty administration.
 
-## 📚 API Documentation (Swagger UI)
+---
 
-FastAPI automatically generates interactive API documentation.
-Once you start the server, you can view the fully documented API here:
-👉 **http://127.0.0.1:8000/docs**
+## 🏗️ Project Architecture
 
-If you prefer ReDoc format, you can visit:
-👉 **http://127.0.0.1:8000/redoc**
+This repository is organized as a monorepo containing both the backend and admin dashboard:
 
-## 🏗️ Project Structure
+- **Backend (`/app`):** Built with Python, FastAPI, and SQLAlchemy (SQLite for development). Features RBAC security, JWT auth, and interactive OpenAPI swagger documentation.
+- **Frontend (`/web-admin`):** Built with Next.js, React, TypeScript, and TailwindCSS. Highly interactive dashboard with real-time statistics, charts, and API integrations.
 
-The project follows a standard modern Python layout:
+---
 
-```text
-karibuInc/
-│
-├── app/
-│   ├── core/           # Core configurations and security functions
-│   │   ├── config.py   # Global environment variables and settings
-│   │   └── security.py # Password hashing and JWT generation
-│   │
-│   ├── models/         # Database models (SQLAlchemy) - *Coming Next*
-│   ├── schemas/        # Pydantic validation models - *Coming Next*
-│   ├── api/            # API routing and endpoints - *Coming Next*
-│   └── main.py         # Main FastAPI application instance
-│
-├── venv/               # Python Virtual Environment
-├── SECURITY_REPORT.md  # Detailed security implementation report
-└── README.md           # This file
-```
+## 🔐 Credentials (Development)
 
-## 🛠️ How to run the local server
+Use these credentials to log into the Admin Dashboard:
+- **Email:** `admin@karibucredit.co.ke`
+- **Password:** `SuperSecret123!`
 
-1. Activate your virtual environment: 
-   - Windows: `.\venv\Scripts\activate`
-   - Mac/Linux: `source venv/bin/activate`
+---
 
-2. Run the Uvicorn server:
+## 🛠️ Quick Start
+
+### 1. Run the Backend API
+
+1. Activate the Python virtual environment:
    ```bash
-   uvicorn app.main:app --reload
+   # Windows:
+   .\venv\Scripts\activate
+   # macOS/Linux:
+   source venv/bin/activate
    ```
+2. Start the Uvicorn dev server:
+   ```bash
+   uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+   ```
+3. Interactive API documentation is available at:
+   - **Swagger UI:** [http://localhost:8000/docs](http://localhost:8000/docs)
+   - **ReDoc:** [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-3. The server will start on `http://127.0.0.1:8000`. You can check the health check endpoint at `http://127.0.0.1:8000/health-check`
+### 2. Run the Next.js Frontend
 
-## 🔒 Security Features Built-in
+1. Navigate to the frontend directory:
+   ```bash
+   cd web-admin
+   ```
+2. Run the dev server:
+   ```bash
+   npm run dev
+   ```
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- **JWT Authentication:** Secure API endpoints requiring tokens.
-- **Bcrypt Hashing:** Passwords are salted and hashed.
-- **Pydantic Validation:** All payloads are strictly typed and validated to prevent injection attacks.
-- **CORS Mitigation:** Restricts access to allowed frontend domains.
+---
+
+## 🌟 Core Features
+
+- **Audit Logs:** Immutable tracking of user actions (loan approvals, borrower onboarding, policy updates, etc.) persisted in the backend database.
+- **Collateral Ledger:** Appraise, track, and attach physical/digital assets directly to active loans.
+- **Late Payment Penalty Settings:** Dynamic grace period and penalty percentage rate configuration from the UI. Calculates penalties dynamically using a daily background cron check.
+- **Credit Reference Bureau (CRB) Checks:** On-demand API validation of borrower risk before issuing loans.
+- **Flexible Disbursements:** Streamlined tracking of stage-wise or partial tranches.
