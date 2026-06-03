@@ -3,28 +3,25 @@
 
 /* ─── Minimalist SaaS Light Palette ─── */
 :root {
-  --bg: #f4f6f8; /* Softer, slightly cooler background for depth */
-  --surface: #ffffff; /* Pure white cards */
-  --surface-2: #f8fafc; /* Subtle interaction/hover */
-  --surface-3: #f1f5f9; /* Deeper accent */
-  --border: #eef2f6; /* Very subtle borders */
-  --border-strong: #e2e8f0; /* Hover/Focus border */
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #f1f5f9;
+  --border: #eef2f6;
+  --border-strong: #e2e8f0;
   
-  --text-primary: #1e293b; /* Deep slate */
-  --text-secondary: #475569; /* Medium slate */
-  --text-muted: #94a3b8; /* Muted slate */
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
 
-  /* Primary Brand (Sleek minimalist black/dark slate or vibrant indigo) - Let's use a sleek Indigo */
   --brand: #4f46e5;
   --brand-light: #eef2ff;
   --brand-mid: #6366f1;
   --brand-glow: rgba(79, 70, 229, 0.1);
 
-  /* Accent */
   --accent: #0f172a;
   --accent-light: #f8fafc;
   
-  /* Status Colors (Pastel tones for minimalist look) */
   --success: #10b981;
   --success-light: #ecfdf5;
   --success-border: #a7f3d0;
@@ -41,12 +38,12 @@
   --info-light: #eff6ff;
   --info-border: #bfdbfe;
 
-  /* Modern Floating Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.02);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.02);
   --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.04), 0 4px 8px -2px rgba(0, 0, 0, 0.02);
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.03);
   --shadow-floating: 0 20px 40px -10px rgba(0,0,0,0.05);
+  --shadow-focus: 0 0 0 3px var(--brand-glow);
 
   --radius-sm: 6px;
   --radius: 12px;
@@ -98,7 +95,7 @@ a {
   background: #94a3b8;
 }
 
-/* ─── App Shell Utilities ─── */
+/* ─── Dashboard Shell ─── */
 .dashboard-shell {
   display: flex;
   height: 100vh;
@@ -113,6 +110,7 @@ a {
   height: 100vh;
   overflow: hidden;
   position: relative;
+  background: var(--bg);
 }
 
 .page-body {
@@ -120,6 +118,7 @@ a {
   overflow-y: auto;
   padding: 2rem;
   padding-bottom: 4rem;
+  background: transparent;
 }
 
 /* ─── Floating Sidebar ─── */
@@ -139,6 +138,17 @@ a {
   box-shadow: var(--shadow-md);
   transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
   position: relative;
+}
+
+.sidebar-section-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  padding: 0 1.1rem;
+  margin-bottom: 0.5rem;
+  margin-top: 1.25rem;
 }
 
 .sidebar-item {
@@ -168,11 +178,15 @@ a {
 
 /* ─── Topbar ─── */
 .topbar {
+  height: 65px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 2rem 0.5rem 2rem;
-  background: transparent;
+  padding: 0 2rem;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   z-index: 40;
 }
 
@@ -196,65 +210,6 @@ a {
   border-radius: var(--radius-xl);
   padding: 1.5rem;
   box-shadow: var(--shadow-card);
-}
-
-/* ─── Buttons ─── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: var(--radius);
-  transition: all 0.15s ease;
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.btn-primary {
-  background: var(--brand);
-  color: #fff;
-  box-shadow: 0 2px 4px var(--brand-glow);
-}
-.btn-primary:hover {
-  background: var(--brand-mid);
-  transform: translateY(-1px);
-}
-
-.btn-secondary {
-  background: var(--surface);
-  color: var(--text-primary);
-  border-color: var(--border-strong);
-}
-.btn-secondary:hover {
-  background: var(--surface-2);
-}
-
-.btn-danger {
-  background: var(--danger-light);
-  color: var(--danger);
-}
-.btn-danger:hover {
-  background: #fee2e2;
-}
-  padding: 0 1.1rem;
-  margin-bottom: 0.5rem;
-  margin-top: 1.25rem;
-}
-
-/* ─── Topbar ─── */
-.topbar {
-  height: 65px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
-  flex-shrink: 0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 /* ─── Premium Tables ─── */
@@ -297,7 +252,7 @@ a {
   border-bottom: none;
 }
 
-/* ─── Status Badges (Clean Mode) ─── */
+/* ─── Status Badges ─── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -391,7 +346,7 @@ a {
 }
 
 .btn-success:hover {
-  background: #15803d; /* Darker green */
+  background: #15803d;
   transform: translateY(-1px);
 }
 
@@ -458,29 +413,6 @@ select.form-input option, select.premium-input option {
   color: var(--text-primary);
 }
 
-/* ─── Dashboard Shell ─── */
-.dashboard-shell {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  background: var(--bg);
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--bg); /* Light grey overall background */
-}
-
-.page-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 2rem;
-  background: transparent;
-}
-
 /* ─── Animations ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
@@ -514,4 +446,3 @@ select.form-input option, select.premium-input option {
 canvas {
   max-width: 100%;
 }
-
