@@ -31,3 +31,17 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 @app.get("/health-check")
 def health_check():
     return {"status": "ok"}
+
+
+@app.get("/download-design-docx")
+def download_design_docx():
+    from fastapi.responses import FileResponse
+    import os
+    path = "docs/Karibu_Credit_Technical_Design_v1.docx"
+    if os.path.exists(path):
+        return FileResponse(
+            path,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename="Karibu_Credit_Technical_Design_v1.docx"
+        )
+    return {"error": "File not found"}

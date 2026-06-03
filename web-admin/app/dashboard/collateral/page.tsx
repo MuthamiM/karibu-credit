@@ -110,7 +110,7 @@ export default function CollateralPage() {
 
   if (loading) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-slate-400 flex items-center gap-3">
+      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
         Loading collateral ledger...
       </div>
@@ -119,14 +119,14 @@ export default function CollateralPage() {
 
   if (error) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-rose-400">
+      <div className="card rounded-3xl p-8 text-red-600">
         Error: {error}
       </div>
     );
   }
 
   return (
-    <div className="glass-panel rounded-[28px] p-6 space-y-6">
+    <div className="card rounded-[28px] p-6 space-y-6">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Asset Backed Lending</p>
         <h2 className="text-xl font-bold tracking-tight text-white mt-1">Collateral Ledger &amp; Valuation Tracker</h2>
@@ -157,19 +157,19 @@ export default function CollateralPage() {
               ) : (
                 collateralList.map((item) => (
                   <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-4 py-3.5 text-slate-400 font-mono">{item.id}</td>
+                    <td className="px-4 py-3.5 text-slate-500 font-mono">{item.id}</td>
                     <td className="px-4 py-3.5">
                       <div>
                         <div className="font-semibold text-white">{item.borrower}</div>
                         <div className="text-[10px] text-slate-500 mt-0.5">{item.details || 'No description'}</div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-400">{item.type}</td>
+                    <td className="px-4 py-3.5 text-slate-500">{item.type}</td>
                     <td className="px-4 py-3.5 font-bold text-white">KES {item.value.toLocaleString()}</td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
                         item.status === 'VERIFIED'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                           : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                       }`}>
                         {item.status}
@@ -186,7 +186,7 @@ export default function CollateralPage() {
           <h3 className="text-sm font-semibold text-white">Add Collateral Asset</h3>
           
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Select Active Loan</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Select Active Loan</label>
             <select
               value={newCollateral.loanId}
               onChange={(e) => setNewCollateral({ ...newCollateral, loanId: e.target.value })}
@@ -206,7 +206,7 @@ export default function CollateralPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Asset Category</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Asset Category</label>
             <select
               value={newCollateral.type}
               onChange={(e) => setNewCollateral({ ...newCollateral, type: e.target.value })}
@@ -220,7 +220,7 @@ export default function CollateralPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Valued Amount (KES)</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Valued Amount (KES)</label>
             <input
               type="number"
               value={newCollateral.value}
@@ -232,7 +232,7 @@ export default function CollateralPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Description &amp; Reference No.</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Description &amp; Reference No.</label>
             <input
               type="text"
               value={newCollateral.details}

@@ -34,10 +34,17 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
+    # Default password used by init_db.py to seed admin accounts
+    DEFAULT_ADMIN_PASSWORD: str = "change_me_in_production"
+
+    # KCB API Gateway
+    KCB_CLIENT_ID: str = ""
+    KCB_CLIENT_SECRET: str = ""
+
     # DATABASES
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "password"
+    POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = "karibu_db"
     SQLALCHEMY_DATABASE_URI: str | None = None
 

@@ -95,3 +95,80 @@ flowchart TD
     IsOwed -- No --> Next
     Next -.-> Loop
 ```
+
+## 4. Loan Top-Up & Settlement Flow
+This shows the lifecycle of a top-up request: eligibility check, balance merge, schedule recalculation, and re-disbursement.
+
+```mermaid
+sequenceDiagram
+    actor Officer as Loan Officer
+    participant API as Karibu API
+    participant Engine as Loan Engine
+    participant DB as PostgreSQL Database
+    participant KCB as KCB B2C Gateway
+
+    Officer->>API: POST /loans/{id}/top-up (top_up_amount, extra_months)
+    API->>DB: Load Loan + Schedule + Product
+    API->>API: Check status ∈ {DISBURSED, ACTIVE}
+    API->>API: Check total_paid >= 50% of total_payable
+
+    alt Not Eligible
+        API-->>Officer: 400 — Insufficient repayment history
+    else Eligible
+        API->>Engine: Calc new schedule (outstanding + top_up_amount)
+        Engine-->>API: New total_payable, EMI, schedule_lines
+        API->>DB: Close old schedule lines (mark PAID)
+        API->>DB: Insert new schedule lines
+        API->>DB: Update loan principal, total_payable, tenure
+        API->>DB: Record TOPUP transaction
+        API->>DB: Commit
+        API-->>Officer: 200 — Top-up applied successfully
+    end
+```
+
+## 5. Group Lending Joint Liability Flow
+This documents the creation of a lending group, member onboarding, and group loan origination process.
+
+```mermaid
+sequenceDiagram
+    actor Officer as Loan Officer
+    participant API as Karibu API
+    participant DB as PostgreSQL Database
+    participant Engine as Loan Engine
+    participant KCB as KCB B2C Gateway
+
+    Officer->>API: POST /groups/create (name, description)
+    API->>DB: Create LendingGroup (code: GRP-XXX)
+    API-->>Officer: Group Created ✓
+
+    loop Add Members (3–15 required)
+        Officer->>API: POST /groups/join (group_id, customer_id, role)
+        API->>DB: Validate customer exists, check capacity
+        API->>DB: Insert GroupMember record
+        API-->>Officer: Member Added ✓
+    end
+
+    Officer->>API: POST /groups/apply (group_id, principal, rate, tenure)
+    API->>DB: Check group has >= 3 active members
+    API->>DB: Check no existing active/pending group loans
+    API->>Engine: Calculate flat-rate schedule
+    Engine-->>API: total_payable, schedule_lines
+    API->>DB: Create GroupLoan (status=PENDING)
+    API-->>Officer: Application GLA-XXX submitted
+
+    Note over Officer, API: After approval, funds are distributed<br/>equally among active group members.<br/>All members are jointly liable.
+```
+
+---
+
+## 📄 Technical Design Document
+
+The full technical design document with high-resolution Matplotlib workflow diagrams and dashboard wireframes has been generated:
+
+**File**: [`docs/Karibu_Credit_Technical_Design_v1.docx`](./Karibu_Credit_Technical_Design_v1.docx)
+
+**Contents**:
+- 5 Workflow Diagrams (Application, Repayment, Penalties, Top-Up, Group Lending)
+- 7 Dashboard Wireframes (CEO, CFO, Branch Manager, Loan Officer, Collections, Compliance, Credit Scoring)
+
+Generated using `scripts/generate_design_docx.py`.

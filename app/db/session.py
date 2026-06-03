@@ -11,6 +11,7 @@ SessionLocal = sessionmaker(
     class_=AsyncSession,
     autocommit=False,
     autoflush=False,
+    expire_on_commit=False,
 )
 
 # Dependency to get DB session

@@ -13,6 +13,13 @@ This repository is organized as a monorepo containing both the backend and admin
 
 ---
 
+## 📚 Documentation & Testing
+
+- **[Developer Handbook](file:///c:/Users/Admin/Desktop/karibuInc/docs/developer_handbook.md)**: Design principles, database settings, security & RBAC policies, and core loan engine details.
+- **[Testing Guide](file:///c:/Users/Admin/Desktop/karibuInc/docs/testing_guide.md)**: Detailed instructions on running the automated backend test suite, database isolation, and test structure.
+
+---
+
 ## 🔐 Credentials (Development)
 
 Use these credentials to log into the Admin Dashboard:

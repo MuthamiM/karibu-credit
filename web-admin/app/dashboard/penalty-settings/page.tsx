@@ -66,7 +66,7 @@ export default function PenaltySettingsPage() {
 
   if (loading) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-slate-400 flex items-center gap-3">
+      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
         Loading global credit policy...
       </div>
@@ -75,14 +75,14 @@ export default function PenaltySettingsPage() {
 
   if (error) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-rose-400">
+      <div className="card rounded-3xl p-8 text-red-600">
         Error: {error}
       </div>
     );
   }
 
   return (
-    <div className="glass-panel rounded-[28px] p-6 space-y-6">
+    <div className="card rounded-[28px] p-6 space-y-6">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Global Credit Policy</p>
         <h2 className="text-xl font-bold tracking-tight text-white mt-1">Penalty Rates &amp; Grace Periods Settings</h2>
@@ -96,7 +96,7 @@ export default function PenaltySettingsPage() {
         
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Grace Period (Days)</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Grace Period (Days)</label>
             <input
               type="number"
               value={penaltyConfig.gracePeriod}
@@ -108,7 +108,7 @@ export default function PenaltySettingsPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Late Penalty Fee (%)</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Late Penalty Fee (%)</label>
             <input
               type="number"
               value={penaltyConfig.penaltyPercentage}
@@ -122,7 +122,7 @@ export default function PenaltySettingsPage() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Penalty Type</label>
+          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Penalty Type</label>
           <select
             value={penaltyConfig.frequency}
             onChange={(e) => setPenaltyConfig({ ...penaltyConfig, frequency: e.target.value })}
@@ -137,7 +137,7 @@ export default function PenaltySettingsPage() {
 
         <div className="pt-4 border-t border-white/5 flex items-center justify-between">
           {settingsSaved ? (
-            <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1.5">
+            <span className="text-emerald-600 text-xs font-semibold flex items-center gap-1.5">
               ✓ Policy settings updated successfully!
             </span>
           ) : (

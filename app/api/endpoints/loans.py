@@ -522,7 +522,14 @@ async def get_my_loans(
     """
     Fetch all loans associated with the current logged-in customer.
     """
-    result = await db.execute(select(Loan).where(Loan.user_id == current_user.id).order_by(Loan.created_at.desc()))
+    from sqlalchemy.orm import selectinload
+    query = select(Loan).options(
+        selectinload(Loan.customer),
+        selectinload(Loan.product),
+        selectinload(Loan.branch),
+        selectinload(Loan.repayment_schedules)
+    ).where(Loan.user_id == current_user.id).order_by(Loan.created_at.desc())
+    result = await db.execute(query)
     return result.scalars().all()
 
 @router.get("/", response_model=list[LoanResponse])
@@ -540,7 +547,13 @@ async def get_all_loans(
             detail="You are not authorized to view all loans."
         )
         
-    query = select(Loan)
+    from sqlalchemy.orm import selectinload
+    query = select(Loan).options(
+        selectinload(Loan.customer),
+        selectinload(Loan.product),
+        selectinload(Loan.branch),
+        selectinload(Loan.repayment_schedules)
+    )
     if status_filter:
         query = query.where(Loan.status == status_filter)
         
@@ -701,4 +714,166 @@ async def attach_collateral(
     )
     
     return collateral_item
+
+
+# Pydantic model for the top-up endpoint (defined before usage)
+from pydantic import BaseModel as _PydanticBase
+
+class TopUpApplyPayload(_PydanticBase):
+    top_up_amount: float
+    additional_tenure_months: int = 0
+    reason: str | None = None
+
+
+
+
+@router.post("/{loan_id}/top-up")
+async def apply_loan_topup(
+    loan_id: int,
+    payload: TopUpApplyPayload,
+
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    """
+    Request a top-up on an active/disbursed loan.
+    Merges remaining principal with top-up amount, recalculates schedule.
+
+    Eligibility:
+    - Loan must be disbursed or active
+    - At least 50% of total payable must already be repaid
+    - Top-up amount must be positive
+    """
+    if current_user.role not in [UserRole.LOAN_OFFICER, UserRole.FINANCE, UserRole.SUPER_ADMIN]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to process loan top-ups."
+        )
+
+    from sqlalchemy.orm import selectinload
+    from app.models.loan import RepaymentSchedule, ScheduleStatus
+
+    result = await db.execute(
+        select(Loan)
+        .options(
+            selectinload(Loan.product),
+            selectinload(Loan.repayment_schedules),
+        )
+        .where(Loan.id == loan_id)
+    )
+    loan = result.scalars().first()
+
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    if loan.status not in [LoanStatus.DISBURSED, LoanStatus.ACTIVE]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Loan must be active or disbursed for top-up. Current status: {loan.status.value}"
+        )
+
+    # Eligibility: at least 50% of the total payable must be repaid
+    if loan.total_payable and loan.total_paid < (loan.total_payable * 0.5):
+        pct_paid = (loan.total_paid / loan.total_payable * 100) if loan.total_payable else 0
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient repayment history. {pct_paid:.1f}% repaid — at least 50% required for top-up eligibility."
+        )
+
+    if payload.top_up_amount <= 0:
+        raise HTTPException(status_code=400, detail="Top-up amount must be greater than zero.")
+
+    # Calculate new merged principal
+    remaining_principal = max(0.0, loan.outstanding_balance)
+    new_principal = remaining_principal + payload.top_up_amount
+
+    # Determine new tenure
+    new_tenure = loan.tenure_months
+    if payload.additional_tenure_months > 0:
+        new_tenure = loan.tenure_months + payload.additional_tenure_months
+
+    # Recalculate schedule using the product's interest method
+    from app.models.loan_product import InterestMethod
+    interest_method = InterestMethod.FLAT
+    if loan.product:
+        interest_method = loan.product.interest_method
+
+    if interest_method == InterestMethod.REDUCING_BALANCE:
+        new_schedule = loan_engine.calculate_reducing_balance_schedule(
+            principal=new_principal,
+            monthly_rate_pct=loan.interest_rate,
+            months=new_tenure,
+        )
+    else:
+        new_schedule = loan_engine.calculate_flat_rate_schedule(
+            principal=new_principal,
+            monthly_rate_pct=loan.interest_rate,
+            months=new_tenure,
+        )
+
+    # Mark old schedule lines as superseded (soft-clear)
+    if loan.repayment_schedules:
+        for sched in loan.repayment_schedules:
+            if sched.status in [ScheduleStatus.PENDING, ScheduleStatus.PARTIAL]:
+                sched.status = ScheduleStatus.PAID  # Mark as closed/superseded
+                sched.amount_paid = sched.total_due  # Zero out balance
+
+    # Insert new repayment schedule lines
+    from datetime import date
+    start_date = date.today()
+    for line in new_schedule["schedule_lines"]:
+        instalment_due_date = start_date + relativedelta(months=line["installment_no"])
+        new_sched = RepaymentSchedule(
+            loan_id=loan.id,
+            instalment_no=line["installment_no"],
+            due_date=instalment_due_date,
+            principal_due=line["principal_due"],
+            interest_due=line["interest_due"],
+            total_due=line["total_due"],
+            amount_paid=0.0,
+            status=ScheduleStatus.PENDING,
+        )
+        db.add(new_sched)
+
+    # Update loan financials
+    original_outstanding = loan.outstanding_balance
+    loan.principal_amount = new_principal
+    loan.tenure_months = new_tenure
+    loan.total_payable = new_schedule["total_payable"]
+    loan.outstanding_balance = new_schedule["total_payable"]
+    loan.total_paid = 0.0  # Reset since schedule is recalculated
+    loan.first_due_date = start_date + relativedelta(months=1)
+    loan.final_due_date = start_date + relativedelta(months=new_tenure)
+    loan.due_date = datetime.now() + relativedelta(months=new_tenure)
+
+    # Log the top-up as a transaction
+    trx = Transaction(
+        loan_id=loan.id,
+        type=TransactionType.DISBURSEMENT,
+        amount=payload.top_up_amount,
+        reference_code=f"TOPUP-{str(uuid.uuid4())[:8].upper()}"
+    )
+    db.add(trx)
+
+    await db.commit()
+    await db.refresh(loan)
+
+    await log_audit_event(
+        db,
+        user=current_user.email,
+        action="LOAN_TOPUP",
+        details=f"Top-up of KES {payload.top_up_amount:,.2f} on Loan #{loan.id}. New principal: KES {new_principal:,.2f}, New tenure: {new_tenure}mo"
+    )
+
+    return {
+        "loan_id": loan.id,
+        "original_outstanding": round(original_outstanding, 2),
+        "top_up_amount": round(payload.top_up_amount, 2),
+        "new_principal": round(new_principal, 2),
+        "new_tenure_months": new_tenure,
+        "new_total_payable": round(new_schedule["total_payable"], 2),
+        "new_monthly_installment": round(new_schedule["monthly_installment"], 2),
+        "status": "top_up_applied",
+    }
+
 

@@ -40,7 +40,7 @@ export default function CollectionsPage() {
   };
 
   return (
-    <div className="glass-panel rounded-[28px] p-6 space-y-6">
+    <div className="card rounded-[28px] p-6 space-y-6">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Recovery Workflow</p>
         <h2 className="text-xl font-bold tracking-tight text-white mt-1">Collections & Overdue Arrears Board</h2>
@@ -64,8 +64,8 @@ export default function CollectionsPage() {
                 <span className="font-semibold text-white">{card.borrower}</span>
                 <span className="text-[10px] text-slate-500 font-mono">#{card.id}</span>
               </div>
-              <div className="text-slate-400 font-medium">Outstanding: KES {card.amount.toLocaleString()}</div>
-              <div className="text-[10px] text-rose-400 font-bold">{card.daysOverdue} Days Past Due</div>
+              <div className="text-slate-500 font-medium">Outstanding: KES {card.amount.toLocaleString()}</div>
+              <div className="text-[10px] text-red-600 font-bold">{card.daysOverdue} Days Past Due</div>
               <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1">
                 <span className="text-[10px] text-slate-500">Agent: {card.officer}</span>
                 <button
@@ -93,14 +93,14 @@ export default function CollectionsPage() {
                 <span className="font-semibold text-white">{card.borrower}</span>
                 <span className="text-[10px] text-slate-500 font-mono">#{card.id}</span>
               </div>
-              <div className="text-slate-400 font-medium">Outstanding: KES {card.amount.toLocaleString()}</div>
-              <div className="text-[10px] text-rose-400 font-bold">{card.daysOverdue} Days Past Due</div>
+              <div className="text-slate-500 font-medium">Outstanding: KES {card.amount.toLocaleString()}</div>
+              <div className="text-[10px] text-red-600 font-bold">{card.daysOverdue} Days Past Due</div>
               <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1">
                 <span className="text-[10px] text-slate-500">Agent: {card.officer}</span>
                 <div className="flex gap-2">
                   <button
                     onClick={() => moveCard(card.id, '31-60', '1-30')}
-                    className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors"
+                    className="text-[10px] font-bold text-slate-500 hover:text-slate-500 transition-colors"
                   >
                     ←
                   </button>
@@ -130,13 +130,13 @@ export default function CollectionsPage() {
                 <span className="font-semibold text-white">{card.borrower}</span>
                 <span className="text-[10px] text-slate-500 font-mono">#{card.id}</span>
               </div>
-              <div className="text-slate-400 font-medium">Outstanding: KES {card.amount.toLocaleString()}</div>
-              <div className="text-[10px] text-rose-400 font-bold">{card.daysOverdue} Days Past Due</div>
+              <div className="text-slate-500 font-medium">Outstanding: KES {card.amount.toLocaleString()}</div>
+              <div className="text-[10px] text-red-600 font-bold">{card.daysOverdue} Days Past Due</div>
               <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1">
                 <span className="text-[10px] text-slate-500 font-bold uppercase text-rose-500">Legal/CRB</span>
                 <button
                   onClick={() => moveCard(card.id, '60+', '31-60')}
-                  className="text-[10px] font-bold text-slate-500 hover:text-slate-400 transition-colors"
+                  className="text-[10px] font-bold text-slate-500 hover:text-slate-500 transition-colors"
                 >
                   ← De-escalate
                 </button>

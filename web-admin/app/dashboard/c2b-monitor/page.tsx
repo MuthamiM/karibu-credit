@@ -65,7 +65,7 @@ export default function C2BMonitorPage() {
 
   if (loading) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-slate-400 flex items-center gap-3">
+      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
         Loading webhook stream...
       </div>
@@ -74,14 +74,14 @@ export default function C2BMonitorPage() {
 
   if (error) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-rose-400">
+      <div className="card rounded-3xl p-8 text-red-600">
         Error: {error}
       </div>
     );
   }
 
   return (
-    <div className="glass-panel rounded-[28px] p-6 space-y-6">
+    <div className="card rounded-[28px] p-6 space-y-6">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">M-Pesa API Webhooks</p>
         <h2 className="text-xl font-bold tracking-tight text-white mt-1">C2B Webhook Callback Stream</h2>
@@ -113,19 +113,19 @@ export default function C2BMonitorPage() {
               c2bLogs.map((log) => {
                 const pillColor =
                   log.status === 'RECONCILED'
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
                     : log.status === 'SUCCESS'
                       ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+                      : 'bg-rose-500/10 text-red-600 border-rose-500/20';
 
                 return (
                   <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3 text-slate-400">{log.time}</td>
+                    <td className="px-4 py-3 text-slate-500">{log.time}</td>
                     <td className="px-4 py-3 text-white font-medium">{log.ref}</td>
                     <td className="px-4 py-3 text-slate-300">{log.phone}</td>
                     <td className="px-4 py-3 text-white font-semibold">KES {log.amount.toLocaleString()}</td>
                     <td className="px-4 py-3 text-slate-300">
-                      {log.loanId === 'INVALID' ? <span className="text-rose-400">UNMATCHED</span> : `#${log.loanId}`}
+                      {log.loanId === 'INVALID' ? <span className="text-red-600">UNMATCHED</span> : `#${log.loanId}`}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${pillColor}`}>

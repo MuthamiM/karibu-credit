@@ -40,13 +40,13 @@ export default function CRBCheckPage() {
   };
 
   const getScoreColor = (score: number) => {
-    if (score < 550) return 'text-rose-400';
+    if (score < 550) return 'text-red-600';
     if (score < 700) return 'text-amber-400';
-    return 'text-emerald-400';
+    return 'text-emerald-600';
   };
 
   return (
-    <div className="glass-panel rounded-[28px] p-6 space-y-6">
+    <div className="card rounded-[28px] p-6 space-y-6">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Credit Reference Bureau</p>
         <h2 className="text-xl font-bold tracking-tight text-white mt-1">Metropol / TransUnion API Query</h2>
@@ -60,7 +60,7 @@ export default function CRBCheckPage() {
           <h3 className="text-sm font-semibold text-white">Search CRB Database</h3>
           
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">National ID / Passport Number</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">National ID / Passport Number</label>
             <input
               type="text"
               value={crbId}
@@ -72,7 +72,7 @@ export default function CRBCheckPage() {
           </div>
 
           {error && (
-            <div className="text-rose-400 text-xs mt-1">
+            <div className="text-red-600 text-xs mt-1">
               Error: {error}
             </div>
           )}
@@ -96,31 +96,31 @@ export default function CRBCheckPage() {
           ) : (
             <div className="space-y-4 text-xs">
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-slate-400">Report Status</span>
-                <span className="font-semibold text-emerald-400">VERIFIED REPORT</span>
+                <span className="text-slate-500">Report Status</span>
+                <span className="font-semibold text-emerald-600">VERIFIED REPORT</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Credit Score</span>
+                <span className="text-slate-500">Credit Score</span>
                 <span className={`text-xl font-extrabold ${getScoreColor(crbResult.score)}`}>{crbResult.score} / 900</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Risk Assessment</span>
+                <span className="text-slate-500">Risk Assessment</span>
                 <span className={`font-semibold ${getScoreColor(crbResult.score)}`}>{crbResult.grading}</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Negative Listings</span>
-                <span className={`font-mono font-semibold ${crbResult.listings > 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+                <span className="text-slate-500">Negative Listings</span>
+                <span className={`font-mono font-semibold ${crbResult.listings > 0 ? 'text-red-600' : 'text-slate-300'}`}>
                   {crbResult.listings} active default listings
                 </span>
               </div>
 
               {crbResult.listings > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Listed Default Amount</span>
-                  <span className="font-mono font-semibold text-rose-400">{crbResult.amount_listed}</span>
+                  <span className="text-slate-500">Listed Default Amount</span>
+                  <span className="font-mono font-semibold text-red-600">{crbResult.amount_listed}</span>
                 </div>
               )}
 

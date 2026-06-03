@@ -37,7 +37,7 @@ export default function OnboardBorrowerPage() {
 
   return (
     <div className="max-w-2xl">
-      <div className="glass-panel rounded-[28px] p-6">
+      <div className="card rounded-[28px] p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400/10 to-amber-600/10 border border-amber-500/15">
             <svg className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -52,14 +52,14 @@ export default function OnboardBorrowerPage() {
         
         {error && (
           <div className="mb-5 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 flex items-center gap-2">
-            <span className="text-rose-400">⚠️</span>
+            <span className="text-red-600">⚠️</span>
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">Full Name</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Full Name</label>
             <input
               type="text"
               value={formData.full_name}
@@ -72,7 +72,7 @@ export default function OnboardBorrowerPage() {
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">Email</label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Email</label>
               <input
                 type="email"
                 value={formData.email}
@@ -83,7 +83,7 @@ export default function OnboardBorrowerPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">Phone Number</label>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Phone Number</label>
               <input
                 type="text"
                 value={formData.phone_number}
@@ -95,7 +95,7 @@ export default function OnboardBorrowerPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">Temporary Password</label>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Temporary Password</label>
             <input
               type="password"
               value={formData.password}

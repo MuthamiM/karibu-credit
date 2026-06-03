@@ -58,7 +58,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md">
         {/* Glassmorphic Login Card */}
-        <div className="glass-panel rounded-[32px] p-8 md:p-10">
+        <div className="card rounded-[32px] p-8 md:p-10">
           
           {/* Logo / Brand Header */}
           <div className="flex flex-col items-center mb-8">
@@ -76,14 +76,14 @@ export default function LoginPage() {
 
           {error && (
             <div className="mb-6 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 flex items-center gap-2">
-              <span className="text-rose-400">⚠️</span>
+              <span className="text-red-600">⚠️</span>
               <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                 Email Address
               </label>
               <div className="relative">
@@ -99,7 +99,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                 Password
               </label>
               <div className="relative">

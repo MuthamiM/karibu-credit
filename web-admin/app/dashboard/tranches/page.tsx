@@ -100,7 +100,7 @@ export default function TranchesPage() {
 
   if (loading) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-slate-400 flex items-center gap-3">
+      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
         Loading stage-wise disbursements...
       </div>
@@ -109,14 +109,14 @@ export default function TranchesPage() {
 
   if (error) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-rose-400">
+      <div className="card rounded-3xl p-8 text-red-600">
         Error: {error}
       </div>
     );
   }
 
   return (
-    <div className="glass-panel rounded-[28px] p-6 space-y-6">
+    <div className="card rounded-[28px] p-6 space-y-6">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Multi-Tranche Portfolio</p>
         <h2 className="text-xl font-bold tracking-tight text-white mt-1">Stage-Wise Disbursement Panel</h2>
@@ -151,16 +151,16 @@ export default function TranchesPage() {
                 const isComplete = loan.disbursed >= loan.total;
                 return (
                   <tr key={loan.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3.5 text-slate-400 font-mono">#{loan.id}</td>
+                    <td className="px-4 py-3.5 text-slate-500 font-mono">#{loan.id}</td>
                     <td className="px-4 py-3.5 text-white font-medium">{loan.borrower}</td>
                     <td className="px-4 py-3.5 text-slate-300">KES {loan.total.toLocaleString()}</td>
-                    <td className="px-4 py-3.5 text-emerald-400 font-semibold">KES {loan.disbursed.toLocaleString()}</td>
+                    <td className="px-4 py-3.5 text-emerald-600 font-semibold">KES {loan.disbursed.toLocaleString()}</td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 w-24 rounded-full bg-white/5 overflow-hidden">
                           <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${percentage}%` }}></div>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-bold">{Math.round(percentage)}%</span>
+                        <span className="text-[10px] text-slate-500 font-bold">{Math.round(percentage)}%</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-slate-300">
@@ -168,7 +168,7 @@ export default function TranchesPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       {isComplete ? (
-                        <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 uppercase">FULLY DISBURSED</span>
+                        <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-600 uppercase">FULLY DISBURSED</span>
                       ) : (
                         <button
                           onClick={() => handleReleaseTranche(loan.id, loan.nextTranche)}

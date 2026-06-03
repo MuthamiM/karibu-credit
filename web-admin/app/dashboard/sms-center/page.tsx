@@ -14,7 +14,7 @@ export default function SMSCenterPage() {
   ]);
 
   return (
-    <div className="glass-panel rounded-[28px] p-6 space-y-6">
+    <div className="card rounded-[28px] p-6 space-y-6">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Automated Communications</p>
         <h2 className="text-xl font-bold tracking-tight text-white mt-1">SMS Notification logs & Templates</h2>
@@ -28,7 +28,7 @@ export default function SMSCenterPage() {
           <h3 className="text-sm font-semibold text-white">Template Configuration</h3>
           
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Trigger Event</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Trigger Event</label>
             <select
               value={smsTemplate}
               onChange={(e) => {
@@ -50,7 +50,7 @@ export default function SMSCenterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">SMS Body Text</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">SMS Body Text</label>
             <textarea
               value={customSmsText}
               onChange={(e) => setCustomSmsText(e.target.value)}
@@ -73,7 +73,7 @@ export default function SMSCenterPage() {
           <div className="space-y-3">
             {smsLogs.map((log) => {
               const badge = log.status === 'DELIVERED' 
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
               return (
                 <div key={log.id} className="rounded-xl border border-white/5 bg-black/20 p-3 text-[11px] space-y-1.5">
@@ -81,7 +81,7 @@ export default function SMSCenterPage() {
                     <span className="font-semibold text-slate-200">{log.recipient}</span>
                     <span className="text-[10px] text-slate-500">{log.time}</span>
                   </div>
-                  <p className="text-slate-400 line-clamp-1">{log.content}</p>
+                  <p className="text-slate-500 line-clamp-1">{log.content}</p>
                   <div className="flex justify-end">
                     <span className={`rounded-full border px-2 py-0.5 text-[8px] font-semibold ${badge}`}>
                       {log.status}

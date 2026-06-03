@@ -26,7 +26,7 @@ export default function B2CPayoutPage() {
   };
 
   return (
-    <div className="glass-panel rounded-[28px] p-6 space-y-6">
+    <div className="card rounded-[28px] p-6 space-y-6">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">M-Pesa Disbursement Gateway</p>
         <h2 className="text-xl font-bold tracking-tight text-white mt-1">Direct B2C Payout Portal</h2>
@@ -40,7 +40,7 @@ export default function B2CPayoutPage() {
           <h3 className="text-sm font-semibold text-white">Disbursement Request Details</h3>
           
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Borrower Mobile Number</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Borrower Mobile Number</label>
             <input
               type="text"
               value={payoutPhone}
@@ -52,7 +52,7 @@ export default function B2CPayoutPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Disbursement Amount (KES)</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Disbursement Amount (KES)</label>
             <input
               type="number"
               value={payoutAmount}
@@ -72,14 +72,14 @@ export default function B2CPayoutPage() {
           </button>
         </form>
 
-        <div className="flex flex-col rounded-2xl border border-white/5 bg-black/40 p-5 font-mono text-[11px] text-slate-400 h-80 overflow-y-auto">
+        <div className="flex flex-col rounded-2xl border border-white/5 bg-black/40 p-5 font-mono text-[11px] text-slate-500 h-80 overflow-y-auto">
           <p className="text-white border-b border-white/10 pb-2 mb-3 font-semibold">Gateway Integration Log</p>
           {payoutLogs.length === 0 ? (
             <p className="text-slate-600 text-center my-auto">Awaiting gateway triggers...</p>
           ) : (
             <div className="space-y-3 whitespace-pre-wrap">
               {payoutLogs.map((log, idx) => (
-                <div key={idx} className={log.includes('RESPONSE: SUCCESS') ? 'text-emerald-400' : ''}>
+                <div key={idx} className={log.includes('RESPONSE: SUCCESS') ? 'text-emerald-600' : ''}>
                   {log}
                 </div>
               ))}

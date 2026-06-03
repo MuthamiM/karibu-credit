@@ -63,7 +63,7 @@ export default function LoansPage() {
 
   if (loading) {
     return (
-      <div className="glass-panel rounded-3xl p-8 text-slate-400 flex items-center gap-3">
+      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
         Loading loans...
       </div>
@@ -72,8 +72,8 @@ export default function LoansPage() {
 
   if (error) {
     return (
-      <div className="glass-panel rounded-3xl p-8">
-        <div className="flex items-center gap-3 text-rose-400">
+      <div className="card rounded-3xl p-8">
+        <div className="flex items-center gap-3 text-red-600">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
@@ -84,7 +84,7 @@ export default function LoansPage() {
   }
 
   return (
-    <div className="glass-panel rounded-[28px] p-6">
+    <div className="card rounded-[28px] p-6">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -146,18 +146,18 @@ export default function LoansPage() {
                 const value = String(loan.status || '').toUpperCase();
                 const statusClass =
                   value === 'APPROVED' || value === 'DISBURSED' || value === 'ACTIVE' || value === 'CLEARED'
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_6px_rgba(16,185,129,0.1)]'
+                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-[0_0_6px_rgba(16,185,129,0.1)]'
                     : value === 'PENDING' || value === 'PARTIALLY_DISBURSED'
-                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_6px_rgba(245,158,11,0.1)]'
+                      ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
                       : value === 'REJECTED' || value === 'DEFAULTED'
-                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_6px_rgba(244,63,94,0.1)]'
-                        : 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+                        ? 'bg-rose-500/10 text-red-600 border-rose-500/20 shadow-[0_0_6px_rgba(244,63,94,0.1)]'
+                        : 'bg-slate-500/10 text-slate-500 border-slate-500/20';
 
                 return (
                   <tr key={loan.id} className="hover:bg-white/[0.03] transition-colors duration-150 group">
-                    <td className="px-4 py-3.5 text-slate-400 font-mono text-xs">#{loan.id}</td>
+                    <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">#{loan.id}</td>
                     <td className="px-4 py-3.5 text-white font-medium">Borrower #{loan.user_id}</td>
-                    <td className="px-4 py-3.5 text-slate-400 capitalize">{loan.product_type}</td>
+                    <td className="px-4 py-3.5 text-slate-500 capitalize">{loan.product_type}</td>
                     <td className="px-4 py-3.5 font-semibold text-white">KES {loan.principal_amount?.toLocaleString() || 0}</td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusClass}`}>
@@ -169,13 +169,13 @@ export default function LoansPage() {
                         <>
                           <button
                             onClick={() => handleApprove(loan.id)}
-                            className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-[11px] font-semibold text-emerald-400 hover:bg-emerald-500/20 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)] transition-all duration-200"
+                            className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-[11px] font-semibold text-emerald-600 hover:bg-emerald-500/20 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)] transition-all duration-200"
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => handleReject(loan.id)}
-                            className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 text-[11px] font-semibold text-rose-400 hover:bg-rose-500/20 hover:shadow-[0_0_10px_rgba(244,63,94,0.15)] transition-all duration-200"
+                            className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-rose-500/20 hover:shadow-[0_0_10px_rgba(244,63,94,0.15)] transition-all duration-200"
                           >
                             Reject
                           </button>
