@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchApi } from '../../../lib/api';
+import { THEME } from '@/theme';
 
 type PenaltyConfig = {
   gracePeriod: number;
@@ -66,54 +67,54 @@ export default function PenaltySettingsPage() {
 
   if (loading) {
     return (
-      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
-        Loading global credit policy...
+      <div className={THEME.classes.panel} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
+        <span className={THEME.classes.textMuted}>Loading global credit policy...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="card rounded-3xl p-8 text-red-600">
-        Error: {error}
+      <div className={THEME.classes.panel}>
+        <p style={{ fontWeight: 700, fontSize: '0.875rem' }}>⚠ Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className="card rounded-[28px] p-6 space-y-6">
+    <div className={THEME.classes.panel} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Global Credit Policy</p>
-        <h2 className="text-xl font-bold tracking-tight text-white mt-1">Penalty Rates &amp; Grace Periods Settings</h2>
-        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+        <p className={THEME.classes.subtitle}>Global Credit Policy</p>
+        <h2 className={THEME.classes.title} style={{ marginTop: 4 }}>Penalty Rates &amp; Grace Periods Settings</h2>
+        <p className={THEME.classes.textMuted} style={{ marginTop: 4, lineHeight: 1.6 }}>
           Configure systemic variables governing late payment fees, penalty accumulation cycles, and borrower payment extension grace thresholds.
         </p>
       </div>
 
-      <form onSubmit={saveSettings} className="space-y-5 rounded-2xl border border-white/5 bg-white/[0.02] p-6 max-w-xl">
-        <h3 className="text-sm font-semibold text-white border-b border-white/5 pb-3">Late Penalty Variables</h3>
+      <form onSubmit={saveSettings} style={{ border: '1px solid #000', padding: '1.5rem', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <h3 style={{ fontSize: '0.8125rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', paddingBottom: '0.75rem', borderBottom: '1px solid #e4e4e7' }}>Late Penalty Variables</h3>
         
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Grace Period (Days)</label>
+            <label className={THEME.classes.textMuted} style={{ display: 'block', marginBottom: 6 }}>Grace Period (Days)</label>
             <input
               type="number"
               value={penaltyConfig.gracePeriod}
               onChange={(e) => setPenaltyConfig({ ...penaltyConfig, gracePeriod: parseInt(e.target.value) || 0 })}
-              className="premium-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+              className={THEME.classes.input}
               min="0"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Late Penalty Fee (%)</label>
+            <label className={THEME.classes.textMuted} style={{ display: 'block', marginBottom: 6 }}>Late Penalty Fee (%)</label>
             <input
               type="number"
               value={penaltyConfig.penaltyPercentage}
               onChange={(e) => setPenaltyConfig({ ...penaltyConfig, penaltyPercentage: parseFloat(e.target.value) || 0 })}
-              className="premium-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+              className={THEME.classes.input}
               min="0"
               max="100"
               required
@@ -122,11 +123,11 @@ export default function PenaltySettingsPage() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Penalty Type</label>
+          <label className={THEME.classes.textMuted} style={{ display: 'block', marginBottom: 6 }}>Penalty Type</label>
           <select
             value={penaltyConfig.frequency}
             onChange={(e) => setPenaltyConfig({ ...penaltyConfig, frequency: e.target.value })}
-            className="premium-select w-full rounded-xl px-4 py-3 text-sm outline-none"
+            className={THEME.classes.input}
             required
           >
             <option value="ONCE">Flat fee on overdue (One-time)</option>
@@ -135,18 +136,16 @@ export default function PenaltySettingsPage() {
           </select>
         </div>
 
-        <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+        <div style={{ paddingTop: '1rem', borderTop: '1px solid #e4e4e7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {settingsSaved ? (
-            <span className="text-emerald-600 text-xs font-semibold flex items-center gap-1.5">
-              ✓ Policy settings updated successfully!
-            </span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>✓ Policy settings updated successfully!</span>
           ) : (
-            <span className="text-slate-500 text-[10px]">Applies to all active and new loans upon due date arrival.</span>
+            <span className={THEME.classes.textMuted}>Applies to all active and new loans upon due date arrival.</span>
           )}
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-gradient-to-r from-amber-500 to-desert-500 hover:from-amber-600 hover:to-desert-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all duration-200 disabled:opacity-50"
+            className={THEME.classes.btnPrimary}
           >
             {saving ? 'Saving...' : 'Save Policy Configuration'}
           </button>

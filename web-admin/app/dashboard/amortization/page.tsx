@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { THEME } from '@/theme';
 
 interface ScheduleLine {
   month: number;
@@ -130,16 +131,16 @@ export default function AmortizationPage() {
     URL.revokeObjectURL(url);
   }, [schedule, calculator]);
 
-  // ---- PDF Export ----
+  // ---- PDF Export (Strict Black & White) ----
   const handleExportPDF = useCallback(() => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
 
     // ── Header bar ──
-    doc.setFillColor(15, 15, 25);
+    doc.setFillColor(0, 0, 0); // Pure Black
     doc.rect(0, 0, pageWidth, 38, 'F');
 
-    doc.setFillColor(217, 119, 6); // amber accent line
+    doc.setFillColor(0, 0, 0); 
     doc.rect(0, 38, pageWidth, 1.5, 'F');
 
     doc.setFont('helvetica', 'bold');
@@ -149,21 +150,21 @@ export default function AmortizationPage() {
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(180, 180, 190);
+    doc.setTextColor(200, 200, 200);
     doc.text('Amortization Schedule Report', 14, 24);
 
     doc.setFontSize(8);
-    doc.setTextColor(140, 140, 155);
+    doc.setTextColor(150, 150, 150);
     doc.text(`Generated: ${new Date().toLocaleString('en-KE')}`, 14, 32);
 
     // ── Loan Parameters Box ──
     const boxY = 46;
-    doc.setFillColor(245, 245, 248);
-    doc.roundedRect(14, boxY, pageWidth - 28, 24, 3, 3, 'F');
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(14, boxY, pageWidth - 28, 24, 0, 0, 'F'); // Stark rectangular shape
 
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 115);
+    doc.setTextColor(80, 80, 80);
 
     const col1 = 20;
     const col2 = 70;
@@ -174,7 +175,7 @@ export default function AmortizationPage() {
     doc.text('LOAN DURATION', col3, boxY + 8);
 
     doc.setFontSize(12);
-    doc.setTextColor(15, 15, 25);
+    doc.setTextColor(0, 0, 0);
     doc.text(formatKES(calculator.principal), col1, boxY + 17);
     doc.text(`${calculator.rate}% p.a.`, col2, boxY + 17);
     doc.text(`${calculator.months} months`, col3, boxY + 17);
@@ -183,7 +184,7 @@ export default function AmortizationPage() {
     const summY = boxY + 32;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 115);
+    doc.setTextColor(80, 80, 80);
 
     doc.text('MONTHLY INSTALLMENT (EMI)', col1, summY);
     doc.text('TOTAL INTEREST', col2, summY);
@@ -191,11 +192,11 @@ export default function AmortizationPage() {
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(217, 119, 6);
+    doc.setTextColor(0, 0, 0);
     doc.text(formatKES(schedule.monthlyInstallment), col1, summY + 8);
-    doc.setTextColor(220, 50, 70);
+    doc.setTextColor(100, 100, 100);
     doc.text(formatKES(schedule.totalInterest), col2, summY + 8);
-    doc.setTextColor(15, 15, 25);
+    doc.setTextColor(0, 0, 0);
     doc.text(formatKES(schedule.totalPayable), col3, summY + 8);
 
     // ── Schedule Table ──
@@ -220,7 +221,7 @@ export default function AmortizationPage() {
       ]],
       theme: 'grid',
       headStyles: {
-        fillColor: [15, 15, 25],
+        fillColor: [0, 0, 0],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 8,
@@ -228,12 +229,12 @@ export default function AmortizationPage() {
       },
       bodyStyles: {
         fontSize: 8,
-        textColor: [30, 30, 45],
+        textColor: [0, 0, 0],
         halign: 'right',
       },
       footStyles: {
-        fillColor: [245, 245, 248],
-        textColor: [15, 15, 25],
+        fillColor: [240, 240, 240],
+        textColor: [0, 0, 0],
         fontStyle: 'bold',
         fontSize: 8,
         halign: 'right',
@@ -242,12 +243,12 @@ export default function AmortizationPage() {
         0: { halign: 'center', cellWidth: 18 },
       },
       alternateRowStyles: {
-        fillColor: [250, 250, 252],
+        fillColor: [250, 250, 250],
       },
       margin: { left: 14, right: 14 },
       styles: {
         cellPadding: 3,
-        lineColor: [220, 220, 228],
+        lineColor: [200, 200, 200],
         lineWidth: 0.2,
       },
     });
@@ -257,11 +258,11 @@ export default function AmortizationPage() {
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       const pageH = doc.internal.pageSize.getHeight();
-      doc.setFillColor(15, 15, 25);
+      doc.setFillColor(0, 0, 0);
       doc.rect(0, pageH - 12, pageWidth, 12, 'F');
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(140, 140, 155);
+      doc.setTextColor(200, 200, 200);
       doc.text('Karibu Credit Ltd. — Confidential', 14, pageH - 4);
       doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageH - 4, { align: 'right' });
     }
@@ -270,80 +271,80 @@ export default function AmortizationPage() {
   }, [schedule, calculator]);
 
   return (
-    <div className="card rounded-[28px] p-6 space-y-6">
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Loan Analytics</p>
-        <h2 className="text-xl font-bold tracking-tight text-white mt-1">Interactive Amortization &amp; Schedule Exporter</h2>
-        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+    <div className={THEME.classes.panel}>
+      <div className="border-b border-black pb-4 mb-6">
+        <p className={THEME.classes.subtitle}>Loan Analytics</p>
+        <h2 className={THEME.classes.title + " mt-1"}>Interactive Amortization &amp; Schedule Exporter</h2>
+        <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
           Perform dry run calculations for repayment cycles, view immediate yields, and download structured schedules.
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[300px_1fr]">
-        <div className="space-y-5 rounded-2xl border border-white/5 bg-white/[0.02] p-5">
-          <h3 className="text-sm font-semibold text-white">Yield Parameters</h3>
+        <div className="space-y-5 border border-black bg-white p-5">
+          <h3 className={THEME.classes.sectionTitle}>Yield Parameters</h3>
           
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Principal (KES)</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Principal (KES)</label>
             <input
               type="number"
               value={calculator.principal}
               onChange={(e) => setCalculator({ ...calculator, principal: parseFloat(e.target.value) || 0 })}
-              className="premium-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              className={THEME.classes.input}
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Annual Interest Rate (%)</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Annual Interest Rate (%)</label>
             <input
               type="number"
               value={calculator.rate}
               onChange={(e) => setCalculator({ ...calculator, rate: parseFloat(e.target.value) || 0 })}
-              className="premium-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              className={THEME.classes.input}
               step="0.1"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Loan Duration (Months)</label>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Loan Duration (Months)</label>
             <input
               type="number"
               value={calculator.months}
               onChange={(e) => setCalculator({ ...calculator, months: parseInt(e.target.value) || 1 })}
-              className="premium-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              className={THEME.classes.input}
               required
             />
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 flex flex-col justify-between">
+        <div className="border border-black bg-white p-6 flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-white mb-4">Calculated Financial Summary</h3>
+            <h3 className={THEME.classes.sectionTitle + " mb-4"}>Calculated Financial Summary</h3>
             
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-xl bg-white/[0.03] p-4">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Installment / Mo</span>
-                <p className="mt-1 text-xl font-bold text-amber-400">KES {Math.round(schedule.monthlyInstallment).toLocaleString()}</p>
+            <div className="grid gap-4 sm:grid-cols-3 mb-6">
+              <div className="border border-black p-4 bg-zinc-50">
+                <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Installment / Mo</span>
+                <p className="mt-1 text-xl font-bold font-mono text-black">KES {Math.round(schedule.monthlyInstallment).toLocaleString()}</p>
               </div>
 
-              <div className="rounded-xl bg-white/[0.03] p-4">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Cumulative Interest</span>
-                <p className="mt-1 text-xl font-bold text-red-600">KES {Math.round(schedule.totalInterest).toLocaleString()}</p>
+              <div className="border border-black p-4 bg-zinc-50">
+                <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Cumulative Interest</span>
+                <p className="mt-1 text-xl font-bold font-mono text-zinc-500">KES {Math.round(schedule.totalInterest).toLocaleString()}</p>
               </div>
 
-              <div className="rounded-xl bg-white/[0.03] p-4">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Payable</span>
-                <p className="mt-1 text-xl font-bold text-white">KES {Math.round(schedule.totalPayable).toLocaleString()}</p>
+              <div className="border border-black p-4 bg-zinc-50">
+                <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Total Payable</span>
+                <p className="mt-1 text-xl font-bold font-mono text-black">KES {Math.round(schedule.totalPayable).toLocaleString()}</p>
               </div>
             </div>
 
             {/* Schedule Table */}
-            <div className="mt-6 max-h-[280px] overflow-y-auto rounded-xl border border-white/5">
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-black/60 backdrop-blur-sm">
-                  <tr className="text-[10px] uppercase tracking-wider text-slate-500">
+            <div className="max-h-[280px] overflow-y-auto border border-black">
+              <table className="w-full text-xs font-mono">
+                <thead className="sticky top-0 bg-black text-white">
+                  <tr className="text-[9px] uppercase tracking-wider">
                     <th className="py-2.5 px-3 text-center font-bold">#</th>
                     <th className="py-2.5 px-3 text-right font-bold">Principal</th>
                     <th className="py-2.5 px-3 text-right font-bold">Interest</th>
@@ -351,13 +352,13 @@ export default function AmortizationPage() {
                     <th className="py-2.5 px-3 text-right font-bold">Balance</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-black">
                   {schedule.lines.map((line) => (
-                    <tr key={line.month} className="text-slate-300 hover:bg-white/[0.03] transition-colors">
-                      <td className="py-2 px-3 text-center text-slate-500 font-medium">{line.month}</td>
+                    <tr key={line.month} className="hover:bg-zinc-50 transition-colors">
+                      <td className="py-2 px-3 text-center text-zinc-500 font-bold">{line.month}</td>
                       <td className="py-2 px-3 text-right">{line.principalDue.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
-                      <td className="py-2 px-3 text-right text-red-600/80">{line.interestDue.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
-                      <td className="py-2 px-3 text-right font-medium text-amber-400/80">{line.totalDue.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 px-3 text-right text-zinc-500">{line.interestDue.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 px-3 text-right font-medium text-black">{line.totalDue.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
                       <td className="py-2 px-3 text-right">{line.remainingBalance.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</td>
                     </tr>
                   ))}
@@ -366,16 +367,16 @@ export default function AmortizationPage() {
             </div>
           </div>
 
-          <div className="pt-6 border-t border-white/5 flex items-center gap-3">
+          <div className="pt-6 border-t border-black/10 mt-6 flex items-center gap-3">
             <button
               onClick={handleExportCSV}
-              className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-5 py-2.5 text-xs font-semibold text-slate-300 transition-all duration-200"
+              className={THEME.classes.btnSecondary}
             >
               Export CSV Schedule
             </button>
             <button
               onClick={handleExportPDF}
-              className="rounded-xl bg-gradient-to-r from-amber-500 to-desert-500 hover:from-amber-600 hover:to-desert-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all duration-200"
+              className={THEME.classes.btnPrimary}
             >
               Download Amortization PDF
             </button>

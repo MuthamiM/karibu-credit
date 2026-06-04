@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchApi } from '../../../lib/api';
+import { THEME } from '@/theme';
 
 /* ─── Types ─── */
 type GroupMember = {
@@ -51,19 +52,19 @@ type CustomerOption = {
 
 /* ─── Status badge helper ─── */
 function statusBadge(status: string) {
-  const map: Record<string, string> = {
-    active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    suspended: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    dissolved: 'bg-rose-500/10 text-red-600 border-rose-500/20',
-    pending: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-    disbursed: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-    cleared: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    defaulted: 'bg-rose-500/10 text-red-600 border-rose-500/20',
-    rejected: 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20',
-  };
-  const cls = map[status] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+  const s = status.toLowerCase();
+  const isFilled = s === 'active' || s === 'cleared' || s === 'disbursed';
+  const isOutline = s === 'pending' || s === 'suspended';
+  
+  let badgeClass = THEME.classes.badgeMuted;
+  if (isFilled) {
+    badgeClass = THEME.classes.badgeFilled;
+  } else if (isOutline) {
+    badgeClass = THEME.classes.badgeOutline;
+  }
+
   return (
-    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${cls}`}>
+    <span className={badgeClass}>
       {status}
     </span>
   );
@@ -91,6 +92,7 @@ export default function GroupLendingPage() {
   /* Detail Panel state */
   const [selectedGroup, setSelectedGroup] = useState<LendingGroup | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [isDetailExpanded, setIsDetailExpanded] = useState(false);
 
   async function loadData() {
     try {
@@ -201,7 +203,7 @@ export default function GroupLendingPage() {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="skeleton" style={{ height: 56, borderRadius: 16 }} />
+          <div key={i} className="skeleton" style={{ height: 56, borderRadius: 0 }} />
         ))}
       </div>
     );
@@ -209,54 +211,44 @@ export default function GroupLendingPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '2rem' }}>
-        <p style={{ color: 'var(--danger)', fontSize: '0.875rem' }}>⚠ {error}</p>
+      <div className={THEME.classes.card}>
+        <p className="text-black font-mono text-xs uppercase tracking-wider">⚠ {error}</p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="space-y-6">
       {/* ─── Header ─── */}
-      <div style={{
-        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-        padding: '1.5rem 1.75rem',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        boxShadow: 'var(--shadow-card)',
-      }}>
+      <div className={`${THEME.classes.card} flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-black pb-4`}>
         <div>
-          <p style={{ fontSize: '0.625rem', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#0ea5e9' }}>
-            Joint Liability
-          </p>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>
-            Group Lending Management
-          </h2>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.6, maxWidth: 520 }}>
+          <p className={THEME.classes.subtitle}>Joint Liability</p>
+          <h2 className={THEME.classes.title + " mt-1"}>Group Lending Management</h2>
+          <p className="text-xs text-zinc-500 mt-2 leading-relaxed max-w-2xl">
             Create and manage lending groups, onboard members, and process group loan applications under joint liability frameworks.
           </p>
         </div>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="btn btn-primary"
-          style={{ fontSize: '0.75rem', padding: '0.5rem 1rem', flexShrink: 0 }}
+          className={THEME.classes.btnPrimary}
         >
           + New Group
         </button>
       </div>
 
       {/* ─── KPI Strip ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Groups', value: groups.length, color: '#6366f1' },
-          { label: 'Active Groups', value: groups.filter(g => g.status === 'active').length, color: '#10b981' },
-          { label: 'Total Members', value: groups.reduce((s, g) => s + g.member_count, 0), color: '#0ea5e9' },
-          { label: 'Group Loans', value: groups.reduce((s, g) => s + g.total_loans, 0), color: '#f59e0b' },
+          { label: 'Total Groups', value: groups.length },
+          { label: 'Active Groups', value: groups.filter(g => g.status === 'active').length },
+          { label: 'Total Members', value: groups.reduce((s, g) => s + g.member_count, 0) },
+          { label: 'Group Loans', value: groups.reduce((s, g) => s + g.total_loans, 0) },
         ].map((kpi) => (
-          <div key={kpi.label} className="stat-card">
-            <p style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+          <div key={kpi.label} className="border border-black p-3 bg-white">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
               {kpi.label}
             </p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: kpi.color, marginTop: 4 }}>
+            <p className="text-2xl font-black font-mono text-black mt-2">
               {kpi.value}
             </p>
           </div>
@@ -265,207 +257,217 @@ export default function GroupLendingPage() {
 
       {/* ─── Create Group Form (collapsible) ─── */}
       {showCreateForm && (
-        <form onSubmit={createGroup} style={{
-          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-          padding: '1.5rem', boxShadow: 'var(--shadow-card)',
-          display: 'grid', gridTemplateColumns: '1fr 1fr 120px auto', gap: '1rem', alignItems: 'end',
-        }}>
-          <div>
-            <label className="form-label">Group Name</label>
+        <form onSubmit={createGroup} className={`${THEME.classes.card} flex flex-col md:flex-row gap-4 items-end`}>
+          <div className="flex-1 w-full">
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Group Name</label>
             <input
               type="text"
-              className="form-input"
+              className={THEME.classes.input}
               value={newGroup.group_name}
               onChange={(e) => setNewGroup({ ...newGroup, group_name: e.target.value })}
-              placeholder="e.g. Umoja Sacco Group"
+              placeholder="E.G. UMOJA SACCO GROUP"
               required
             />
           </div>
-          <div>
-            <label className="form-label">Description</label>
+          <div className="flex-1 w-full">
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Description</label>
             <input
               type="text"
-              className="form-input"
+              className={THEME.classes.input}
               value={newGroup.description}
               onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
-              placeholder="Market vendors, Nairobi CBD"
+              placeholder="MARKET VENDORS, NAIROBI CBD"
             />
           </div>
-          <div>
-            <label className="form-label">Max Members</label>
+          <div className="w-full md:w-32">
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Max Members</label>
             <input
               type="number"
-              className="form-input"
+              className={THEME.classes.input}
               value={newGroup.max_members}
               onChange={(e) => setNewGroup({ ...newGroup, max_members: parseInt(e.target.value) || 15 })}
               min={3}
               max={30}
             />
           </div>
-          <button type="submit" disabled={submitting} className="btn btn-primary" style={{ height: 40 }}>
+          <button type="submit" disabled={submitting} className={THEME.classes.btnPrimary + " w-full md:w-auto"}>
             {submitting ? 'Creating…' : 'Create Group'}
           </button>
         </form>
       )}
 
       {/* ─── Main Content Grid ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: selectedGroup ? '1fr 400px' : '1fr', gap: '1.25rem' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Groups Table */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Group Name</th>
-                <th>Members</th>
-                <th>Loans</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groups.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    No lending groups found. Create one to get started.
-                  </td>
-                </tr>
-              ) : (
-                groups.map((g) => (
-                  <tr key={g.id} style={{ cursor: 'pointer' }} onClick={() => viewGroupDetails(g.id)}>
-                    <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '0.75rem' }}>{g.group_code}</td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{g.group_name}</div>
-                      {g.description && (
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                          {g.description.length > 50 ? g.description.slice(0, 50) + '…' : g.description}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: 700, color: '#0ea5e9' }}>{g.member_count}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.6875rem' }}> / {g.max_members}</span>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>{g.total_loans}</td>
-                    <td>{statusBadge(g.status)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          className="btn btn-ghost"
-                          style={{ fontSize: '0.6875rem', padding: '0.25rem 0.5rem' }}
-                          onClick={(e) => { e.stopPropagation(); setAddMemberGroupId(g.id); }}
-                        >
-                          + Member
-                        </button>
-                        <button
-                          className="btn btn-ghost"
-                          style={{ fontSize: '0.6875rem', padding: '0.25rem 0.5rem', color: '#6366f1' }}
-                          onClick={(e) => { e.stopPropagation(); setLoanGroupId(g.id); }}
-                        >
-                          Apply Loan
-                        </button>
-                      </div>
-                    </td>
+        {!isDetailExpanded && (
+          <div className={`${THEME.classes.card} lg:col-span-8 overflow-hidden`}>
+            <div className="border-b border-black pb-3 mb-4">
+              <h3 className={THEME.classes.sectionTitle}>Lending Groups</h3>
+            </div>
+            <div className="overflow-x-auto border border-black bg-white">
+              <table className="min-w-full text-left text-xs font-mono">
+                <thead className="bg-black text-white uppercase tracking-wider text-[10px] border-b border-black">
+                  <tr>
+                    <th className="px-4 py-3 font-bold">Code</th>
+                    <th className="px-4 py-3 font-bold">Group Name</th>
+                    <th className="px-4 py-3 font-bold">Members</th>
+                    <th className="px-4 py-3 font-bold">Loans</th>
+                    <th className="px-4 py-3 font-bold">Status</th>
+                    <th className="px-4 py-3 font-bold">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-black">
+                  {groups.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-zinc-400 uppercase tracking-widest">
+                        No lending groups found. Create one to get started.
+                      </td>
+                    </tr>
+                  ) : (
+                    groups.map((g) => (
+                      <tr key={g.id} className="hover:bg-zinc-50 transition-colors" onClick={() => viewGroupDetails(g.id)}>
+                        <td className="px-4 py-3 text-zinc-500 font-bold">{g.group_code}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-black uppercase">{g.group_name}</div>
+                          {g.description && (
+                            <div className="text-[10px] text-zinc-400 mt-0.5 uppercase">
+                              {g.description.length > 50 ? g.description.slice(0, 50) + '…' : g.description}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-bold text-black">{g.member_count}</span>
+                          <span className="text-zinc-400 text-[10px]"> / {g.max_members}</span>
+                        </td>
+                        <td className="px-4 py-3 font-bold">{g.total_loans}</td>
+                        <td className="px-4 py-3">{statusBadge(g.status)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="border border-black bg-white hover:bg-zinc-100 px-2.5 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-black"
+                              onClick={() => setAddMemberGroupId(g.id)}
+                            >
+                              + Member
+                            </button>
+                            <button
+                              className="border border-black bg-black text-white hover:bg-zinc-800 px-2.5 py-1 text-[9px] font-mono font-bold uppercase tracking-wider"
+                              onClick={() => setLoanGroupId(g.id)}
+                            >
+                              Apply Loan
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Detail Panel */}
         {selectedGroup && (
-          <div style={{
-            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-            padding: '1.25rem', boxShadow: 'var(--shadow-card)',
-            display: 'flex', flexDirection: 'column', gap: '1rem', overflow: 'auto', maxHeight: 'calc(100vh - 340px)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{selectedGroup.group_name}</h3>
-              <button onClick={() => setSelectedGroup(null)} className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>✕</button>
+          <div className={`${THEME.classes.card} ${isDetailExpanded ? 'lg:col-span-12' : 'lg:col-span-4'} space-y-4 max-h-[calc(100vh-340px)] overflow-y-auto`}>
+            <div className="flex justify-between items-center border-b border-black pb-3">
+              <div className="flex items-center gap-2">
+                <h3 className={THEME.classes.sectionTitle}>{selectedGroup.group_name}</h3>
+                <button
+                  onClick={() => setIsDetailExpanded(!isDetailExpanded)}
+                  title={isDetailExpanded ? "Collapse Details" : "Expand Details"}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '4px',
+                    border: '1px solid #000',
+                    background: '#fff',
+                    color: '#000',
+                    cursor: 'pointer',
+                    borderRadius: '2px'
+                  }}
+                >
+                  {isDetailExpanded ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M8 3H3v5M16 21h5v-5M21 3l-7 7M3 21l7-7" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <button onClick={() => { setSelectedGroup(null); setIsDetailExpanded(false); }} className="font-bold text-xs uppercase hover:underline">✕ Close</button>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <span style={{ fontFamily: 'monospace', fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{selectedGroup.group_code}</span>
+            <div className="flex gap-3 font-mono text-[10px] items-center">
+              <span className="text-zinc-500 font-bold">{selectedGroup.group_code}</span>
               {statusBadge(selectedGroup.status)}
             </div>
             {selectedGroup.description && (
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedGroup.description}</p>
+              <p className="text-xs text-zinc-500 uppercase leading-relaxed font-mono">{selectedGroup.description}</p>
             )}
 
             {/* Members list */}
-            <div>
-              <p style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-100 pb-1">
                 Members ({selectedGroup.members?.length || 0})
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div className="space-y-2">
                 {(selectedGroup.members || []).map((m) => (
-                  <div key={m.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: 'var(--surface-2)', border: '1px solid var(--border)',
-                    borderRadius: 10, padding: '0.5rem 0.75rem',
-                  }}>
-                    <div>
-                      <span style={{ fontWeight: 600, fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
-                        {m.customer_name || `Customer #${m.customer_id}`}
-                      </span>
-                    </div>
-                    <span style={{
-                      fontSize: '0.625rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
-                      color: m.role === 'chairman' ? '#f59e0b' : m.role === 'treasurer' ? '#10b981' : 'var(--text-muted)',
-                    }}>
+                  <div key={m.id} className="flex items-center justify-between border border-black bg-zinc-50 p-2 font-mono text-xs uppercase">
+                    <span className="font-bold text-black">
+                      {m.customer_name || `Customer #${m.customer_id}`}
+                    </span>
+                    <span className="text-[10px] font-bold text-zinc-500">
                       {m.role}
                     </span>
                   </div>
                 ))}
                 {(!selectedGroup.members || selectedGroup.members.length === 0) && (
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem' }}>No members yet</p>
+                  <p className="text-[10px] text-zinc-400 font-mono uppercase text-center py-2">No members onboarded yet</p>
                 )}
               </div>
             </div>
 
             {/* Group Loans */}
-            <div>
-              <p style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-100 pb-1">
                 Loan History ({selectedGroup.group_loans?.length || 0})
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div className="space-y-3">
                 {(selectedGroup.group_loans || []).map((gl) => (
-                  <div key={gl.id} style={{
-                    background: 'var(--surface-2)', border: '1px solid var(--border)',
-                    borderRadius: 10, padding: '0.625rem 0.75rem',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: '0.6875rem', color: '#6366f1' }}>{gl.application_no}</span>
+                  <div key={gl.id} className="border border-black p-3 bg-white font-mono text-xs uppercase">
+                    <div className="flex justify-between items-center border-b border-zinc-100 pb-1 mb-2">
+                      <span className="font-bold text-black">{gl.application_no}</span>
                       {statusBadge(gl.status)}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        KES {gl.principal_amount?.toLocaleString()}
-                      </span>
-                      <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                        {gl.tenure_months}mo @ {gl.interest_rate}%
-                      </span>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Principal:</span>
+                      <span className="font-bold text-black">KES {gl.principal_amount?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between mt-1">
+                      <span className="text-zinc-500">Tenure:</span>
+                      <span>{gl.tenure_months}mo @ {gl.interest_rate}%</span>
                     </div>
                     {gl.total_payable > 0 && (
-                      <div style={{ marginTop: 6 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.625rem', color: 'var(--text-muted)' }}>
-                          <span>Repaid</span>
-                          <span>KES {gl.total_paid?.toLocaleString()} / {gl.total_payable?.toLocaleString()}</span>
+                      <div className="mt-3 pt-2 border-t border-zinc-100">
+                        <div className="flex justify-between text-[9px] text-zinc-400 font-bold mb-1">
+                          <span>Repayment Progress</span>
+                          <span>{Math.round((gl.total_paid / gl.total_payable) * 100)}%</span>
                         </div>
-                        <div style={{ height: 4, background: 'var(--surface-2)', borderRadius: 99, marginTop: 3, overflow: 'hidden' }}>
-                          <div style={{
-                            height: '100%', borderRadius: 99,
-                            width: `${Math.min(100, (gl.total_paid / gl.total_payable) * 100)}%`,
-                            background: 'linear-gradient(90deg, #6366f1, #0ea5e9)',
-                            transition: 'width 0.5s ease',
-                          }} />
+                        <div className="h-1.5 w-full bg-zinc-200 overflow-hidden">
+                          <div
+                            className="h-full bg-black transition-all duration-300"
+                            style={{ width: `${Math.min(100, (gl.total_paid / gl.total_payable) * 100)}%` }}
+                          />
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
                 {(!selectedGroup.group_loans || selectedGroup.group_loans.length === 0) && (
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem' }}>No group loans yet</p>
+                  <p className="text-[10px] text-zinc-400 font-mono uppercase text-center py-2">No group loans filed yet</p>
                 )}
               </div>
             </div>
@@ -475,26 +477,19 @@ export default function GroupLendingPage() {
 
       {/* ─── Add Member Modal ─── */}
       {addMemberGroupId && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
-        }}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => setAddMemberGroupId(null)}
         >
           <form
             onSubmit={addMember}
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-              padding: '1.5rem', width: 400, boxShadow: 'var(--shadow-lg)',
-              display: 'flex', flexDirection: 'column', gap: '1rem',
-            }}
+            className={`${THEME.classes.card} w-[400px] space-y-4`}
           >
-            <h3 style={{ fontWeight: 700, fontSize: '0.9375rem' }}>Add Member to Group</h3>
+            <h3 className={THEME.classes.sectionTitle}>Add Member to Group</h3>
             <div>
-              <label className="form-label">Select Borrower</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Select Borrower</label>
               <select
-                className="form-input"
+                className={THEME.classes.input}
                 value={memberForm.customer_id}
                 onChange={(e) => setMemberForm({ ...memberForm, customer_id: e.target.value })}
                 required
@@ -506,9 +501,9 @@ export default function GroupLendingPage() {
               </select>
             </div>
             <div>
-              <label className="form-label">Role</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Role</label>
               <select
-                className="form-input"
+                className={THEME.classes.input}
                 value={memberForm.role}
                 onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
               >
@@ -518,9 +513,9 @@ export default function GroupLendingPage() {
                 <option value="treasurer">Treasurer</option>
               </select>
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setAddMemberGroupId(null)}>Cancel</button>
-              <button type="submit" disabled={submitting} className="btn btn-primary">
+            <div className="flex gap-2 pt-2 border-t border-black/10 justify-end">
+              <button type="button" className={THEME.classes.btnSecondary} onClick={() => setAddMemberGroupId(null)}>Cancel</button>
+              <button type="submit" disabled={submitting} className={THEME.classes.btnPrimary}>
                 {submitting ? 'Adding…' : 'Add Member'}
               </button>
             </div>
@@ -530,52 +525,45 @@ export default function GroupLendingPage() {
 
       {/* ─── Group Loan Application Modal ─── */}
       {loanGroupId && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
-        }}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => setLoanGroupId(null)}
         >
           <form
             onSubmit={applyGroupLoan}
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-              padding: '1.5rem', width: 420, boxShadow: 'var(--shadow-lg)',
-              display: 'flex', flexDirection: 'column', gap: '1rem',
-            }}
+            className={`${THEME.classes.card} w-[420px] space-y-4`}
           >
-            <h3 style={{ fontWeight: 700, fontSize: '0.9375rem' }}>Apply for Group Loan</h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            <h3 className={THEME.classes.sectionTitle}>Apply for Group Loan</h3>
+            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider leading-relaxed">
               The principal will be distributed equally among active group members under joint liability.
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="form-label">Principal (KES)</label>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Principal (KES)</label>
                 <input
                   type="number"
-                  className="form-input"
+                  className={THEME.classes.input}
                   value={loanForm.principal_amount}
                   onChange={(e) => setLoanForm({ ...loanForm, principal_amount: e.target.value })}
-                  placeholder="e.g. 500000"
+                  placeholder="E.G. 500000"
                   required
                 />
               </div>
               <div>
-                <label className="form-label">Monthly Rate (%)</label>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Monthly Rate (%)</label>
                 <input
                   type="number"
-                  className="form-input"
+                  className={THEME.classes.input}
                   value={loanForm.interest_rate}
                   onChange={(e) => setLoanForm({ ...loanForm, interest_rate: e.target.value })}
                   step="0.5"
                 />
               </div>
               <div>
-                <label className="form-label">Tenure (months)</label>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Tenure (months)</label>
                 <input
                   type="number"
-                  className="form-input"
+                  className={THEME.classes.input}
                   value={loanForm.tenure_months}
                   onChange={(e) => setLoanForm({ ...loanForm, tenure_months: e.target.value })}
                   min={1}
@@ -583,19 +571,19 @@ export default function GroupLendingPage() {
                 />
               </div>
               <div>
-                <label className="form-label">Purpose</label>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Purpose</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={THEME.classes.input}
                   value={loanForm.purpose}
                   onChange={(e) => setLoanForm({ ...loanForm, purpose: e.target.value })}
-                  placeholder="Working capital"
+                  placeholder="WORKING CAPITAL"
                 />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button type="button" className="btn btn-ghost" onClick={() => setLoanGroupId(null)}>Cancel</button>
-              <button type="submit" disabled={submitting} className="btn btn-primary">
+            <div className="flex gap-2 pt-2 border-t border-black/10 justify-end">
+              <button type="button" className={THEME.classes.btnSecondary} onClick={() => setLoanGroupId(null)}>Cancel</button>
+              <button type="submit" disabled={submitting} className={THEME.classes.btnPrimary}>
                 {submitting ? 'Submitting…' : 'Submit Application'}
               </button>
             </div>

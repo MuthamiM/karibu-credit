@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { THEME } from '@/theme';
 
 export default function B2CPayoutPage() {
   const [payoutPhone, setPayoutPhone] = useState('');
@@ -26,38 +27,38 @@ export default function B2CPayoutPage() {
   };
 
   return (
-    <div className="card rounded-[28px] p-6 space-y-6">
+    <div className={THEME.classes.panel} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">M-Pesa Disbursement Gateway</p>
-        <h2 className="text-xl font-bold tracking-tight text-white mt-1">Direct B2C Payout Portal</h2>
-        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-          Approve and manually disburse funds directly to a customer's phone number using the Safaricom B2C Disbursement API channel.
+        <p className={THEME.classes.subtitle}>M-Pesa Disbursement Gateway</p>
+        <h2 className={THEME.classes.title} style={{ marginTop: 4 }}>Direct B2C Payout Portal</h2>
+        <p className={THEME.classes.textMuted} style={{ marginTop: 4, lineHeight: 1.6 }}>
+          Approve and manually disburse funds directly to a customer&apos;s phone number using the Safaricom B2C Disbursement API channel.
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <form onSubmit={triggerPayout} className="space-y-5 rounded-2xl border border-white/5 bg-white/[0.02] p-5">
-          <h3 className="text-sm font-semibold text-white">Disbursement Request Details</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <form onSubmit={triggerPayout} style={{ border: '1px solid #000', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h3 style={{ fontSize: '0.8125rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Disbursement Request Details</h3>
           
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Borrower Mobile Number</label>
+            <label className={THEME.classes.textMuted} style={{ display: 'block', marginBottom: 6 }}>Borrower Mobile Number</label>
             <input
               type="text"
               value={payoutPhone}
               onChange={(e) => setPayoutPhone(e.target.value)}
-              className="premium-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+              className={THEME.classes.input}
               placeholder="e.g. 254712345678"
               required
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Disbursement Amount (KES)</label>
+            <label className={THEME.classes.textMuted} style={{ display: 'block', marginBottom: 6 }}>Disbursement Amount (KES)</label>
             <input
               type="number"
               value={payoutAmount}
               onChange={(e) => setPayoutAmount(e.target.value)}
-              className="premium-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+              className={THEME.classes.input}
               placeholder="e.g. 15000"
               required
             />
@@ -66,20 +67,21 @@ export default function B2CPayoutPage() {
           <button
             type="submit"
             disabled={payoutLoading}
-            className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-desert-500 hover:from-amber-600 hover:to-desert-600 py-3 text-xs font-bold text-white shadow-md transition-all duration-200"
+            className={THEME.classes.btnPrimary}
+            style={{ width: '100%' }}
           >
             {payoutLoading ? 'Authorizing Gateway...' : 'Execute Direct Disbursement'}
           </button>
         </form>
 
-        <div className="flex flex-col rounded-2xl border border-white/5 bg-black/40 p-5 font-mono text-[11px] text-slate-500 h-80 overflow-y-auto">
-          <p className="text-white border-b border-white/10 pb-2 mb-3 font-semibold">Gateway Integration Log</p>
+        <div style={{ border: '1px solid #000', padding: '1.25rem', fontFamily: 'monospace', fontSize: '0.6875rem', color: '#71717a', height: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <p style={{ fontWeight: 700, color: '#000', borderBottom: '1px solid #e4e4e7', paddingBottom: 8, marginBottom: 12 }}>Gateway Integration Log</p>
           {payoutLogs.length === 0 ? (
-            <p className="text-slate-600 text-center my-auto">Awaiting gateway triggers...</p>
+            <p style={{ textAlign: 'center', margin: 'auto', color: '#a1a1aa' }}>Awaiting gateway triggers...</p>
           ) : (
-            <div className="space-y-3 whitespace-pre-wrap">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, whiteSpace: 'pre-wrap' }}>
               {payoutLogs.map((log, idx) => (
-                <div key={idx} className={log.includes('RESPONSE: SUCCESS') ? 'text-emerald-600' : ''}>
+                <div key={idx} style={{ fontWeight: log.includes('RESPONSE: SUCCESS') ? 700 : 400 }}>
                   {log}
                 </div>
               ))}

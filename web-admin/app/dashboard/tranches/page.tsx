@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchApi } from '../../../lib/api';
+import { THEME } from '@/theme';
 
 type UserInfo = {
   id: number;
@@ -44,7 +45,6 @@ export default function TranchesPage() {
         userMap.set(u.id, u.full_name);
       });
 
-      // Filter for partial or stage-wise disbursement loans
       const filtered = loansData
         .filter((l: LoanItem) => 
           l.disbursement_method === 'partial' || l.disbursement_method === 'stage_wise'
@@ -53,7 +53,6 @@ export default function TranchesPage() {
           const total = l.principal_amount;
           const disbursed = l.amount_disbursed || 0;
           const remaining = total - disbursed;
-          // Set next tranche to be 25% of principal, or remaining amount if less
           const chunk = total / 4;
           const nextTranche = remaining > 0 ? Math.min(remaining, chunk) : 0;
 
@@ -100,48 +99,48 @@ export default function TranchesPage() {
 
   if (loading) {
     return (
-      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
-        Loading stage-wise disbursements...
+      <div className={THEME.classes.panel} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
+        <span className={THEME.classes.textMuted}>Loading stage-wise disbursements...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="card rounded-3xl p-8 text-red-600">
-        Error: {error}
+      <div className={THEME.classes.panel}>
+        <p style={{ fontSize: '0.875rem', fontWeight: 700 }}>⚠ Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className="card rounded-[28px] p-6 space-y-6">
+    <div className={THEME.classes.panel} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Multi-Tranche Portfolio</p>
-        <h2 className="text-xl font-bold tracking-tight text-white mt-1">Stage-Wise Disbursement Panel</h2>
-        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+        <p className={THEME.classes.subtitle}>Multi-Tranche Portfolio</p>
+        <h2 className={THEME.classes.title} style={{ marginTop: 4 }}>Stage-Wise Disbursement Panel</h2>
+        <p className={THEME.classes.textMuted} style={{ marginTop: 4, lineHeight: 1.6 }}>
           Release project funds in installment chunks (tranches) based on inspection milestones, construction completions, or agribusiness reports.
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-white/5 bg-white/[0.02]">
-        <table className="min-w-full text-left text-xs">
-          <thead className="text-[10px] uppercase tracking-[0.15em] text-slate-500 border-b border-white/5">
-            <tr>
-              <th className="px-4 py-3.5 font-medium">Loan ID</th>
-              <th className="px-4 py-3.5 font-medium">Borrower</th>
-              <th className="px-4 py-3.5 font-medium">Total Principal</th>
-              <th className="px-4 py-3.5 font-medium">Disbursed Balance</th>
-              <th className="px-4 py-3.5 font-medium">Progress</th>
-              <th className="px-4 py-3.5 font-medium">Next Tranche</th>
-              <th className="px-4 py-3.5 font-medium">Action</th>
+      <div style={{ border: '1px solid #000', overflow: 'hidden' }}>
+        <table style={{ width: '100%', textAlign: 'left', fontSize: '0.75rem', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #000', background: '#f4f4f5' }}>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Loan ID</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Borrower</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Total Principal</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Disbursed</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Progress</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Next Tranche</th>
+              <th style={{ padding: '0.75rem 1rem', fontSize: '0.625rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody>
             {loans.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-500">
+                <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: '#71717a' }}>
                   No active stage-wise or partial disbursement loans found.
                 </td>
               </tr>
@@ -150,30 +149,31 @@ export default function TranchesPage() {
                 const percentage = (loan.disbursed / loan.total) * 100;
                 const isComplete = loan.disbursed >= loan.total;
                 return (
-                  <tr key={loan.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3.5 text-slate-500 font-mono">#{loan.id}</td>
-                    <td className="px-4 py-3.5 text-white font-medium">{loan.borrower}</td>
-                    <td className="px-4 py-3.5 text-slate-300">KES {loan.total.toLocaleString()}</td>
-                    <td className="px-4 py-3.5 text-emerald-600 font-semibold">KES {loan.disbursed.toLocaleString()}</td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-24 rounded-full bg-white/5 overflow-hidden">
-                          <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${percentage}%` }}></div>
+                  <tr key={loan.id} style={{ borderBottom: '1px solid #e4e4e7', transition: 'background 0.15s' }}>
+                    <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', color: '#71717a' }}>#{loan.id}</td>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{loan.borrower}</td>
+                    <td style={{ padding: '0.75rem 1rem' }}>KES {loan.total.toLocaleString()}</td>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>KES {loan.disbursed.toLocaleString()}</td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ height: 6, width: 96, background: '#e4e4e7', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', background: '#000', transition: 'width 0.3s', width: `${percentage}%` }}></div>
                         </div>
-                        <span className="text-[10px] text-slate-500 font-bold">{Math.round(percentage)}%</span>
+                        <span style={{ fontSize: '0.625rem', fontWeight: 800, fontFamily: 'monospace' }}>{Math.round(percentage)}%</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-slate-300">
+                    <td style={{ padding: '0.75rem 1rem' }}>
                       {isComplete ? '—' : `KES ${loan.nextTranche.toLocaleString()}`}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td style={{ padding: '0.75rem 1rem' }}>
                       {isComplete ? (
-                        <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-600 uppercase">FULLY DISBURSED</span>
+                        <span className={THEME.classes.badgeFilled}>FULLY DISBURSED</span>
                       ) : (
                         <button
                           onClick={() => handleReleaseTranche(loan.id, loan.nextTranche)}
                           disabled={actionLoading === loan.id}
-                          className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-[10px] font-semibold text-amber-400 hover:bg-amber-500/20 disabled:opacity-50 transition-all duration-200"
+                          className={THEME.classes.btnPrimary}
+                          style={{ fontSize: '0.625rem', padding: '0.35rem 0.75rem' }}
                         >
                           {actionLoading === loan.id ? 'Processing...' : 'Disburse Tranche'}
                         </button>

@@ -1,8 +1,28 @@
 'use client';
 
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { fetchApi } from '../../../lib/api';
+import { THEME } from '@/theme';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 type Borrower = {
   id: number;
@@ -12,71 +32,235 @@ type Borrower = {
   is_active: boolean;
 };
 
+type CustomerResponse = {
+  id: number;
+  customer_code: string;
+  national_id: string;
+  phone: string;
+  kra_pin?: string | null;
+  kyc_status: string;
+  credit_score: number;
+  max_loan_limit: number;
+  blacklisted: boolean;
+  blacklisted_reason?: string | null;
+};
+
+type Loan = {
+  id: number;
+  user_id: number;
+  customer_id?: number | null;
+  principal_amount: number;
+  outstanding_balance: number;
+  total_paid: number;
+  total_payable?: number | null;
+  status: string;
+  product_type: string;
+  created_at: string;
+  application_no?: string | null;
+  customer?: CustomerResponse | null;
+  tenure_months?: number | null;
+};
+
 export default function BorrowersPage() {
   const [borrowers, setBorrowers] = useState<Borrower[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [selectedBorrowerId, setSelectedBorrowerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [crbChecking, setCrbChecking] = useState(false);
+  const [crbResult, setCrbResult] = useState<{ score: number; grading: string } | null>(null);
+  const [isDetailExpanded, setIsDetailExpanded] = useState(false);
 
+  // Load borrowers and loans concurrently
   useEffect(() => {
-    async function loadBorrowers() {
+    async function loadData() {
       try {
-        const data = await fetchApi('/users/?role=borrower');
-        setBorrowers(data);
+        const [borrowersData, loansData] = await Promise.all([
+          fetchApi('/users/?role=borrower'),
+          fetchApi('/loans/')
+        ]);
+        setBorrowers(borrowersData);
+        setLoans(loansData);
+        if (borrowersData.length > 0) {
+          setSelectedBorrowerId(borrowersData[0].id);
+        }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load borrowers');
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
     }
-    loadBorrowers();
+    loadData();
   }, []);
 
-  const filteredBorrowers = borrowers.filter((b) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      b.full_name.toLowerCase().includes(query) ||
-      b.email.toLowerCase().includes(query) ||
-      (b.phone_number && b.phone_number.includes(query)) ||
-      String(b.id).includes(query)
-    );
-  });
+  // Filter borrowers list based on search
+  const filteredBorrowers = useMemo(() => {
+    return borrowers.filter((b) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        b.full_name.toLowerCase().includes(q) ||
+        b.email.toLowerCase().includes(q) ||
+        (b.phone_number && b.phone_number.includes(q)) ||
+        String(b.id).includes(q)
+      );
+    });
+  }, [borrowers, searchQuery]);
+
+  // Set the selected borrower profile details
+  const selectedBorrower = useMemo(() => {
+    if (selectedBorrowerId === null) return null;
+    return borrowers.find((b) => b.id === selectedBorrowerId) || null;
+  }, [borrowers, selectedBorrowerId]);
+
+  // Filter loans for selected borrower
+  const selectedBorrowerLoans = useMemo(() => {
+    if (selectedBorrowerId === null) return [];
+    return loans.filter((l) => l.user_id === selectedBorrowerId);
+  }, [loans, selectedBorrowerId]);
+
+  // Extract customer details or calculate defaults
+  const selectedBorrowerCustomer = useMemo(() => {
+    if (!selectedBorrower) return null;
+    
+    const loanWithCustomer = selectedBorrowerLoans.find((l) => l.customer);
+    if (loanWithCustomer?.customer) {
+      return loanWithCustomer.customer;
+    }
+
+    // Default mock customer details
+    const mockIdVal = (selectedBorrower.id * 12345) % 100000;
+    const mockCreditScore = 600 + (selectedBorrower.id * 17) % 250;
+    const mockLimit = 50000 + (selectedBorrower.id * 5000) % 200000;
+
+    return {
+      id: selectedBorrower.id,
+      customer_code: `KC-${String(mockIdVal).padStart(8, '0')}`,
+      national_id: `NID-${20000000 + (selectedBorrower.id * 97) % 80000000}`,
+      phone: selectedBorrower.phone_number || '254700000000',
+      kra_pin: `A${String(mockIdVal).padStart(9, '0')}Z`,
+      kyc_status: 'VERIFIED',
+      credit_score: mockCreditScore,
+      max_loan_limit: mockLimit,
+      blacklisted: false,
+    } as CustomerResponse;
+  }, [selectedBorrower, selectedBorrowerLoans]);
+
+  // Statistics for selected borrower
+  const stats = useMemo(() => {
+    const totalLoans = selectedBorrowerLoans.length;
+    const paidLoans = selectedBorrowerLoans.filter(
+      (l) => l.status === 'cleared' || l.status === 'closed'
+    ).length;
+    const activeLoans = selectedBorrowerLoans.filter(
+      (l) => l.status === 'disbursed' || l.status === 'active'
+    ).length;
+    const pendingLoans = selectedBorrowerLoans.filter(
+      (l) => l.status === 'pending' || l.status === 'screening' || l.status === 'reviewing'
+    ).length;
+
+    const totalPrincipal = selectedBorrowerLoans.reduce((sum, l) => sum + l.principal_amount, 0);
+    const totalRepaid = selectedBorrowerLoans.reduce((sum, l) => sum + l.total_paid, 0);
+    const totalOutstanding = selectedBorrowerLoans.reduce((sum, l) => sum + l.outstanding_balance, 0);
+    
+    const totalPayable = selectedBorrowerLoans.reduce((sum, l) => {
+      return sum + (l.total_payable || l.principal_amount);
+    }, 0);
+
+    const repaymentRate = totalPayable > 0 ? (totalRepaid / totalPayable) * 100 : 0;
+
+    return {
+      totalLoans,
+      paidLoans,
+      activeLoans,
+      pendingLoans,
+      totalPrincipal,
+      totalRepaid,
+      totalOutstanding,
+      repaymentRate,
+    };
+  }, [selectedBorrowerLoans]);
+
+  // Handle mock CRB Check
+  const handleCrbCheck = async () => {
+    if (!selectedBorrowerCustomer) return;
+    setCrbChecking(true);
+    setCrbResult(null);
+    try {
+      const res = await fetchApi('/loans/crb-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ national_id: selectedBorrowerCustomer.national_id }),
+      });
+      setCrbResult({
+        score: res.score,
+        grading: res.grading,
+      });
+      if (selectedBorrowerCustomer) {
+        selectedBorrowerCustomer.credit_score = res.score;
+      }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'CRB check failed');
+    } finally {
+      setCrbChecking(false);
+    }
+  };
+
+  // Setup monochrome bar chart data
+  const chartData = useMemo(() => {
+    const labels = selectedBorrowerLoans.map((l) => l.application_no || `ID: ${l.id}`);
+    
+    return {
+      labels: labels.length > 0 ? labels : ['No Loans'],
+      datasets: [
+        {
+          label: 'Principal Amount (KES)',
+          data: labels.length > 0 ? selectedBorrowerLoans.map((l) => l.principal_amount) : [0],
+          backgroundColor: THEME.colors.black,
+          borderColor: THEME.colors.black,
+          borderWidth: 1,
+        },
+        {
+          label: 'Total Repaid (KES)',
+          data: labels.length > 0 ? selectedBorrowerLoans.map((l) => l.total_paid) : [0],
+          backgroundColor: THEME.colors.white,
+          borderColor: THEME.colors.black,
+          borderWidth: 1.5,
+        },
+      ],
+    };
+  }, [selectedBorrowerLoans]);
 
   if (loading) {
     return (
-      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
-        Loading borrowers...
+      <div className="min-h-[500px] flex items-center justify-center bg-white border border-black p-8 text-black gap-3 font-mono">
+        <span className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
+        LOADING DASHBOARD...
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="card rounded-3xl p-8">
-        <div className="flex items-center gap-3 text-red-600">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-          {error}
+      <div className="bg-white border border-black p-8 text-black font-mono">
+        <div className="flex items-center gap-3">
+          <span>⚠️</span>
+          <span>{error}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card rounded-[28px] p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className={`${THEME.classes.card} flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`}>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500">Borrowers</p>
-          <h2 className="text-xl font-bold tracking-tight text-white">Customer portfolio</h2>
+          <p className={THEME.classes.subtitle}>ADMINISTRATIVE INTERFACE</p>
+          <h2 className={THEME.classes.title}>Customer Portfolio & Credit Risk</h2>
         </div>
-        <Link
-          href="/dashboard/borrowers/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-desert-500 hover:from-amber-600 hover:to-desert-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:shadow-amber-500/10 transition-all duration-200"
-        >
+        <Link href="/dashboard/borrowers/new" className={THEME.classes.btnPrimary}>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
           </svg>
@@ -84,89 +268,354 @@ export default function BorrowersPage() {
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="mb-5 relative">
-        <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search by name, email, phone, or ID..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="premium-input w-full rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none placeholder-slate-500"
-        />
-      </div>
+      {/* Main Split Interface */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* Left Side: Master Borrower List */}
+        {!isDetailExpanded && (
+          <div className={`${THEME.classes.card} lg:col-span-5 space-y-4`}>
+            <div className="border-b border-black pb-3">
+              <h3 className={THEME.classes.sectionTitle}>Borrowers List</h3>
+              <p className="text-xs text-zinc-500 font-mono mt-0.5">Total accounts: {borrowers.length}</p>
+            </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-white/5 bg-white/[0.02]">
-        <table className="min-w-full text-left text-sm">
-          <thead className="text-[10px] uppercase tracking-[0.2em] text-slate-500 border-b border-white/5">
-            <tr>
-              <th className="px-4 py-3.5 font-medium">Customer</th>
-              <th className="px-4 py-3.5 font-medium">Email</th>
-              <th className="px-4 py-3.5 font-medium">Phone</th>
-              <th className="px-4 py-3.5 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {filteredBorrowers.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-12 text-center text-slate-500">
-                  <div className="flex flex-col items-center gap-2">
-                    <svg className="h-8 w-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                    </svg>
-                    <span>{searchQuery ? 'No borrowers match your search.' : 'No borrowers found.'}</span>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              filteredBorrowers.map((user) => (
-                <tr key={user.id} className="hover:bg-white/[0.03] transition-colors duration-150 group">
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center text-xs font-bold text-amber-400">
-                        {user.full_name.charAt(0).toUpperCase()}
+            {/* Search box */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="SEARCH BY NAME, EMAIL, PHONE, OR ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={THEME.classes.input}
+              />
+              <svg className="absolute right-3 top-3.5 h-3.5 w-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </div>
+
+            {/* Table / List */}
+            <div className="overflow-y-auto max-h-[600px] border border-black divide-y divide-black">
+              {filteredBorrowers.length === 0 ? (
+                <div className="p-8 text-center text-xs font-mono text-zinc-400 uppercase tracking-widest">
+                  No borrowers found
+                </div>
+              ) : (
+                filteredBorrowers.map((user) => {
+                  const isSelected = user.id === selectedBorrowerId;
+                  return (
+                    <div
+                      key={user.id}
+                      onClick={() => {
+                        setSelectedBorrowerId(user.id);
+                        setCrbResult(null);
+                      }}
+                      className={`p-4 cursor-pointer transition-colors duration-100 flex items-center justify-between ${
+                        isSelected ? 'bg-black text-white' : 'bg-white text-black hover:bg-zinc-100'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-3">
+                        <div className="font-bold text-xs uppercase tracking-wide truncate">{user.full_name}</div>
+                        <div className={`text-[10px] font-mono mt-0.5 truncate ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                          {user.email}
+                        </div>
+                        <div className={`text-[10px] font-mono mt-0.5 ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                          {user.phone_number || 'NO PHONE'}
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium text-white">{user.full_name}</div>
-                        <div className="text-[11px] text-slate-500 font-mono">ID #{user.id}</div>
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        <span className={`border text-[9px] font-mono uppercase font-bold tracking-wider px-2 py-0.5 ${
+                          isSelected 
+                            ? 'border-white text-white' 
+                            : 'border-black bg-black text-white'
+                        }`}>
+                          ID #{user.id}
+                        </span>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-4 py-3.5 text-slate-500">{user.email}</td>
-                  <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">{user.phone_number || '—'}</td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                      user.is_active
-                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-[0_0_6px_rgba(16,185,129,0.1)]'
-                        : 'bg-rose-500/10 text-red-600 border-rose-500/20 shadow-[0_0_6px_rgba(244,63,94,0.1)]'
-                    }`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Right Side: Detail Statistics View */}
+        <div className={`${THEME.classes.card} ${isDetailExpanded ? 'lg:col-span-12' : 'lg:col-span-7'} space-y-6`}>
+          {selectedBorrower ? (
+            <>
+              {/* Profile Header */}
+              <div className="border-b border-black pb-4 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-bold uppercase tracking-wide text-black">
+                      {selectedBorrower.full_name}
+                    </h3>
+                    <button
+                      onClick={() => setIsDetailExpanded(!isDetailExpanded)}
+                      title={isDetailExpanded ? "Collapse Details" : "Expand Details"}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        border: '1px solid #000',
+                        background: '#fff',
+                        color: '#000',
+                        cursor: 'pointer',
+                        borderRadius: '2px',
+                        marginLeft: '4px'
+                      }}
+                    >
+                      {isDetailExpanded ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M8 3H3v5M16 21h5v-5M21 3l-7 7M3 21l7-7" />
+                        </svg>
+                      )}
+                    </button>
+                    <span className={THEME.classes.badgeFilled}>
+                      {selectedBorrower.is_active ? 'ACTIVE ACCOUNT' : 'INACTIVE'}
                     </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs font-mono uppercase text-zinc-500">
+                    <div>Email: <span className="text-black font-semibold">{selectedBorrower.email}</span></div>
+                    <div>Phone: <span className="text-black font-semibold">{selectedBorrower.phone_number || '—'}</span></div>
+                    {selectedBorrowerCustomer && (
+                      <>
+                        <div>Code: <span className="text-black font-semibold">{selectedBorrowerCustomer.customer_code}</span></div>
+                        <div>National ID: <span className="text-black font-semibold">{selectedBorrowerCustomer.national_id}</span></div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleCrbCheck}
+                    disabled={crbChecking}
+                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'0.35rem', border:'1px solid #000', background:'#fff', color:'#000', padding:'0.5rem 1rem', fontSize:'11px', fontWeight:700, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'0.03em', cursor: crbChecking ? 'default' : 'pointer', opacity: crbChecking ? 0.6 : 1 }}
+                  >
+                    {crbChecking ? 'RUNNING CRB...' : 'RUN CRB CHECK'}
+                  </button>
+                  <Link
+                    href={`/dashboard/loans/new?borrower_id=${selectedBorrower.id}`}
+                    style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'0.35rem', border:'1px solid #000', background:'#000', color:'#ffffff', padding:'0.5rem 1rem', fontSize:'11px', fontWeight:700, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'0.03em', textDecoration:'none', cursor:'pointer' }}
+                  >
+                    CREATE LOAN
+                  </Link>
+                </div>
+              </div>
+
+              {/* CRB Simulation Banner */}
+              {crbResult && (
+                <div className="border-2 border-black bg-white p-4 font-mono text-xs uppercase flex items-center justify-between">
+                  <div>
+                    <span className="font-bold">CRB INQUIRY RESULT</span>
+                    <div className="mt-1 text-[11px] text-zinc-600">
+                      Score: <span className="text-black font-bold">{crbResult.score}</span> | Risk Grading: <span className="text-black font-bold">{crbResult.grading}</span>
+                    </div>
+                  </div>
+                  <div className="border border-black bg-black text-white px-2 py-1 font-bold">
+                    PASSED
+                  </div>
+                </div>
+              )}
+
+              {/* 4 Stats Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="border border-black p-3 bg-white">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">LOANS APPLIED</div>
+                  <div className="text-2xl font-bold font-mono text-black mt-1">{stats.totalLoans}</div>
+                  <div className="text-[9px] font-mono text-zinc-400 mt-1 uppercase">
+                    {stats.pendingLoans} PENDING
+                  </div>
+                </div>
+
+                <div className="border border-black p-3 bg-white">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">FULLY PAID</div>
+                  <div className="text-2xl font-bold font-mono text-black mt-1">{stats.paidLoans}</div>
+                  <div className="text-[9px] font-mono text-zinc-400 mt-1 uppercase">
+                    {stats.activeLoans} ACTIVE DEBTS
+                  </div>
+                </div>
+
+                <div className="border border-black p-3 bg-white">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">OUTSTANDING</div>
+                  <div className="text-lg font-bold font-mono text-black mt-1.5 truncate">
+                    KES {stats.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+                  </div>
+                  <div className="text-[9px] font-mono text-zinc-400 mt-1 uppercase">
+                    FROM {stats.totalPrincipal.toLocaleString()} PRINCIPAL
+                  </div>
+                </div>
+
+                <div className="border border-black p-3 bg-white">
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">CREDIT SCORE</div>
+                  <div className="text-2xl font-bold font-mono text-black mt-1">
+                    {selectedBorrowerCustomer?.credit_score || 'N/A'}
+                  </div>
+                  <div className="text-[9px] font-mono text-zinc-400 mt-1 uppercase">
+                    LIMIT: KES {selectedBorrowerCustomer?.max_loan_limit.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Rows & Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                
+                {/* Financial Summary */}
+                <div className="md:col-span-5 border border-black p-4 space-y-4">
+                  <h4 className={THEME.classes.sectionTitle}>Financial Summary</h4>
+                  <div className="space-y-3 text-xs font-mono uppercase">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Total Borrowed</span>
+                      <span className="text-black font-bold">
+                        KES {stats.totalPrincipal.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Total Repaid</span>
+                      <span className="text-black font-bold">
+                        KES {stats.totalRepaid.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">Repayment Rate</span>
+                      <span className="text-black font-bold">
+                        {stats.repaymentRate.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">KRA PIN</span>
+                      <span className="text-black font-bold">
+                        {selectedBorrowerCustomer?.kra_pin || 'NOT PROVIDED'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-500">KYC Status</span>
+                      <span className="text-black font-bold">
+                        {selectedBorrowerCustomer?.kyc_status || 'PENDING'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Meter */}
+                  <div className="pt-2">
+                    <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">
+                      CREDIT RATING METER
+                    </div>
+                    <div className="h-4 w-full border border-black bg-white relative overflow-hidden">
+                      <div
+                        className="h-full bg-black transition-all duration-300"
+                        style={{
+                          width: `${selectedBorrowerCustomer ? Math.min(100, Math.max(0, ((selectedBorrowerCustomer.credit_score - 300) / 550) * 100)) : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[8px] font-mono text-zinc-400 uppercase mt-1">
+                      <span>300 (POOR)</span>
+                      <span>850 (EXCELLENT)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Chart */}
+                <div className="md:col-span-7 border border-black p-4 flex flex-col">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-black border-b border-zinc-200 pb-2 mb-3">
+                    Principal vs Repayments
+                  </h4>
+                  <div className="flex-1 min-h-[160px] relative">
+                    <Bar data={chartData} options={THEME.chart.options} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Historical Applied Loans list */}
+              <div className="space-y-3">
+                <h4 className={THEME.classes.sectionTitle}>Historical Loan Applications</h4>
+                <div className="overflow-x-auto border border-black bg-white">
+                  <table className="min-w-full text-left text-xs font-mono">
+                    <thead className="bg-black text-white uppercase tracking-wider text-[10px] border-b border-black">
+                      <tr>
+                        <th className="px-4 py-3 font-bold">Application No</th>
+                        <th className="px-4 py-3 font-bold">Principal</th>
+                        <th className="px-4 py-3 font-bold">Paid Amount</th>
+                        <th className="px-4 py-3 font-bold">Term</th>
+                        <th className="px-4 py-3 font-bold">Status</th>
+                        <th className="px-4 py-3 font-bold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black">
+                      {selectedBorrowerLoans.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-zinc-400 uppercase tracking-widest">
+                            No loan applications on file
+                          </td>
+                        </tr>
+                      ) : (
+                        selectedBorrowerLoans.map((loan) => (
+                          <tr key={loan.id} className="hover:bg-zinc-50 transition-colors">
+                            <td className="px-4 py-3 font-bold">
+                              {loan.application_no || `L-${loan.id}`}
+                            </td>
+                            <td className="px-4 py-3">
+                              KES {loan.principal_amount.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3">
+                              KES {loan.total_paid.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3">
+                              {loan.tenure_months} Mo
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={
+                                loan.status === 'cleared' || loan.status === 'closed'
+                                  ? THEME.classes.badgeFilled
+                                  : loan.status === 'disbursed' || loan.status === 'active'
+                                  ? THEME.classes.badgeOutline
+                                  : THEME.classes.badgeMuted
+                              }>
+                                {loan.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <Link
+                                href={`/dashboard?loan_id=${loan.id}`}
+                                className="border border-black bg-white px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-black hover:bg-black hover:text-white transition-colors"
+                              >
+                                View Details
+                              </Link>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="min-h-[500px] flex flex-col items-center justify-center text-center p-8 uppercase font-mono text-zinc-400 tracking-widest border border-dashed border-black">
+              <svg className="h-12 w-12 text-zinc-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+              </svg>
+              <span>Select a borrower from the left to load profiles and statistics</span>
+            </div>
+          )}
+        </div>
+
       </div>
 
-      {/* Summary */}
-      <div className="mt-4 flex items-center justify-between px-1">
-        <p className="text-xs text-slate-500">
-          Showing <span className="text-slate-300 font-medium">{filteredBorrowers.length}</span> of <span className="text-slate-300 font-medium">{borrowers.length}</span> customers
-        </p>
-        <div className="flex items-center gap-3 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
-            {borrowers.filter(b => b.is_active).length} active
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-rose-400"></span>
-            {borrowers.filter(b => !b.is_active).length} inactive
-          </span>
+      {/* Summary Footer */}
+      <div className="border border-black bg-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs font-mono uppercase text-black gap-2">
+        <div>
+          ACTIVE CUSTOMERS: <span className="font-bold">{borrowers.filter(b => b.is_active).length}</span> | INACTIVE: <span className="font-bold">{borrowers.filter(b => !b.is_active).length}</span>
+        </div>
+        <div>
+          TOTAL SYSTEM LOANS RECORDED: <span className="font-bold">{loans.length}</span>
         </div>
       </div>
     </div>

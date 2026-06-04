@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '../../../lib/api';
+import { THEME } from '@/theme';
 
 type LoanItem = {
   id: number;
@@ -63,8 +64,8 @@ export default function LoansPage() {
 
   if (loading) {
     return (
-      <div className="card rounded-3xl p-8 text-slate-500 flex items-center gap-3">
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></span>
+      <div className="min-h-[300px] flex items-center justify-center bg-white border border-black p-8 text-black gap-3 font-mono text-xs uppercase tracking-wider">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
         Loading loans...
       </div>
     );
@@ -72,29 +73,24 @@ export default function LoansPage() {
 
   if (error) {
     return (
-      <div className="card rounded-3xl p-8">
-        <div className="flex items-center gap-3 text-red-600">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-          {error}
+      <div className="border border-black bg-white p-8">
+        <div className="flex items-center gap-3 text-black font-mono text-xs uppercase tracking-wider">
+          <span>⚠️</span>
+          <span>{error}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card rounded-[28px] p-6">
+    <div className={THEME.classes.panel}>
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-black pb-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500">Loans</p>
-          <h2 className="text-xl font-bold tracking-tight text-white">Loan applications</h2>
+          <p className={THEME.classes.subtitle}>Loans</p>
+          <h2 className={THEME.classes.title}>Loan applications</h2>
         </div>
-        <Link
-          href="/dashboard/loans/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-desert-500 hover:from-amber-600 hover:to-desert-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:shadow-amber-500/10 transition-all duration-200"
-        >
+        <Link href="/dashboard/loans/new" className={THEME.classes.btnPrimary}>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
@@ -104,63 +100,59 @@ export default function LoansPage() {
 
       {/* Search Bar */}
       <div className="mb-5 relative">
-        <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <svg className="absolute left-4 top-3.5 h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
         </svg>
         <input
           type="text"
-          placeholder="Search by ID, type, status, or borrower..."
+          placeholder="SEARCH BY ID, TYPE, STATUS, OR BORROWER..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="premium-input w-full rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none placeholder-slate-500"
+          className={THEME.classes.input + " pl-11"}
         />
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-white/5 bg-white/[0.02]">
-        <table className="min-w-full text-left text-sm">
-          <thead className="text-[10px] uppercase tracking-[0.2em] text-slate-500 border-b border-white/5">
+      <div className="overflow-x-auto border border-black bg-white">
+        <table className="min-w-full text-left text-xs font-mono">
+          <thead className="bg-black text-white uppercase tracking-wider text-[10px] border-b border-black">
             <tr>
-              <th className="px-4 py-3.5 font-medium">ID</th>
-              <th className="px-4 py-3.5 font-medium">Borrower</th>
-              <th className="px-4 py-3.5 font-medium">Type</th>
-              <th className="px-4 py-3.5 font-medium">Amount</th>
-              <th className="px-4 py-3.5 font-medium">Status</th>
-              <th className="px-4 py-3.5 font-medium">Action</th>
+              <th className="px-4 py-3.5 font-bold">ID</th>
+              <th className="px-4 py-3.5 font-bold">Borrower</th>
+              <th className="px-4 py-3.5 font-bold">Type</th>
+              <th className="px-4 py-3.5 font-bold">Amount</th>
+              <th className="px-4 py-3.5 font-bold">Status</th>
+              <th className="px-4 py-3.5 font-bold">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-black">
             {filteredLoans.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-slate-500">
-                  <div className="flex flex-col items-center gap-2">
-                    <svg className="h-8 w-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                    </svg>
-                    <span>{searchQuery ? 'No loans match your search.' : 'No active loans found.'}</span>
-                  </div>
+                <td colSpan={6} className="py-12 text-center text-zinc-400 uppercase tracking-widest">
+                  {searchQuery ? 'No loans match your search.' : 'No active loans found.'}
                 </td>
               </tr>
             ) : (
               filteredLoans.map((loan) => {
                 const value = String(loan.status || '').toUpperCase();
-                const statusClass =
-                  value === 'APPROVED' || value === 'DISBURSED' || value === 'ACTIVE' || value === 'CLEARED'
-                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-[0_0_6px_rgba(16,185,129,0.1)]'
-                    : value === 'PENDING' || value === 'PARTIALLY_DISBURSED'
-                      ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                      : value === 'REJECTED' || value === 'DEFAULTED'
-                        ? 'bg-rose-500/10 text-red-600 border-rose-500/20 shadow-[0_0_6px_rgba(244,63,94,0.1)]'
-                        : 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+                const isDisbursed = value === 'APPROVED' || value === 'DISBURSED' || value === 'ACTIVE' || value === 'CLEARED';
+                const isPending = value === 'PENDING' || value === 'PARTIALLY_DISBURSED';
+                
+                let badgeClass = THEME.classes.badgeMuted;
+                if (isDisbursed) {
+                  badgeClass = THEME.classes.badgeFilled;
+                } else if (isPending) {
+                  badgeClass = THEME.classes.badgeOutline;
+                }
 
                 return (
-                  <tr key={loan.id} className="hover:bg-white/[0.03] transition-colors duration-150 group">
-                    <td className="px-4 py-3.5 text-slate-500 font-mono text-xs">#{loan.id}</td>
-                    <td className="px-4 py-3.5 text-white font-medium">Borrower #{loan.user_id}</td>
-                    <td className="px-4 py-3.5 text-slate-500 capitalize">{loan.product_type}</td>
-                    <td className="px-4 py-3.5 font-semibold text-white">KES {loan.principal_amount?.toLocaleString() || 0}</td>
+                  <tr key={loan.id} className="hover:bg-zinc-50 transition-colors duration-150">
+                    <td className="px-4 py-3.5 text-zinc-500 font-bold">#{loan.id}</td>
+                    <td className="px-4 py-3.5 text-black font-semibold">Borrower #{loan.user_id}</td>
+                    <td className="px-4 py-3.5 text-zinc-500 uppercase">{loan.product_type}</td>
+                    <td className="px-4 py-3.5 font-bold text-black">KES {loan.principal_amount?.toLocaleString() || 0}</td>
                     <td className="px-4 py-3.5">
-                      <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusClass}`}>
+                      <span className={badgeClass}>
                         {value}
                       </span>
                     </td>
@@ -169,19 +161,19 @@ export default function LoansPage() {
                         <>
                           <button
                             onClick={() => handleApprove(loan.id)}
-                            className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-[11px] font-semibold text-emerald-600 hover:bg-emerald-500/20 hover:shadow-[0_0_10px_rgba(16,185,129,0.15)] transition-all duration-200"
+                            className="border border-black bg-black text-white hover:bg-zinc-800 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider"
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => handleReject(loan.id)}
-                            className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-rose-500/20 hover:shadow-[0_0_10px_rgba(244,63,94,0.15)] transition-all duration-200"
+                            className="border border-black bg-white text-black hover:bg-zinc-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider"
                           >
                             Reject
                           </button>
                         </>
                       ) : (
-                        <span className="text-xs text-slate-600">—</span>
+                        <span className="text-zinc-400">—</span>
                       )}
                     </td>
                   </tr>
@@ -193,9 +185,9 @@ export default function LoansPage() {
       </div>
 
       {/* Summary Footer */}
-      <div className="mt-4 flex items-center justify-between px-1">
-        <p className="text-xs text-slate-500">
-          Showing <span className="text-slate-300 font-medium">{filteredLoans.length}</span> of <span className="text-slate-300 font-medium">{loans.length}</span> loans
+      <div className="mt-4 flex items-center justify-between px-1 font-mono text-[10px] uppercase text-zinc-400 tracking-wider">
+        <p>
+          Showing <span className="text-black font-bold">{filteredLoans.length}</span> of <span className="text-black font-bold">{loans.length}</span> loans
         </p>
       </div>
     </div>

@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { THEME } from '@/theme';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,98 +49,263 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-[#05070e] px-4 py-12 overflow-hidden">
-      {/* Dynamic Background Mesh & Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/10 blur-[120px] animate-float"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-desert-500/10 blur-[120px] animate-float-delayed"></div>
-      <div className="absolute top-[30%] right-[20%] w-[30%] h-[30%] rounded-full bg-amber-500/5 blur-[100px] animate-pulse-glow"></div>
-      
-      {/* Radial overlay */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_20%,#05070e_90%)]"></div>
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      fontFamily: "'Inter', sans-serif",
+      background: THEME.colors.bg,
+    }}>
+      {/* ─── LEFT: Stark Black Brand Panel ─── */}
+      <div style={{
+        flex: '0 0 45%',
+        background: THEME.colors.black,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '3rem',
+        position: 'relative',
+        borderRight: `1px solid ${THEME.colors.grayDark}`,
+      }}>
+        {/* Subtle grid pattern overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, opacity: 0.05,
+          backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+          backgroundSize: '24px 24px',
+        }} />
 
-      <div className="relative z-10 w-full max-w-md">
-        {/* Glassmorphic Login Card */}
-        <div className="card rounded-[32px] p-8 md:p-10">
-          
-          {/* Logo / Brand Header */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-desert-500 shadow-[0_0_30px_rgba(15,180,195,0.3)] mb-4">
-              <span className="text-3xl font-black text-white">K</span>
-              <div className="absolute inset-0 rounded-2xl border border-white/20"></div>
-            </div>
-            <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 tracking-tight">
-              Karibu Credit
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 360, textAlign: 'center' }}>
+          {/* Logo */}
+          <div style={{
+            width: 56, height: 56,
+            background: THEME.colors.white,
+            border: `2px solid ${THEME.colors.white}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 2rem',
+            borderRadius: '4px',
+          }}>
+            <span style={{ fontSize: 24, fontWeight: 800, color: THEME.colors.black, letterSpacing: '-0.02em' }}>K</span>
+          </div>
+
+          <h1 style={{
+            fontSize: '1.75rem', fontWeight: 800, color: THEME.colors.white,
+            letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: '0.75rem',
+            textTransform: 'uppercase',
+          }}>
+            Karibu Credit
+          </h1>
+          <p style={{
+            fontSize: '0.8125rem', color: THEME.colors.textMuted, lineHeight: 1.6,
+            marginBottom: '3rem', fontWeight: 400,
+          }}>
+            ADMINISTRATIVE CONSOLE V2 //
+            SECURED LOAN DISBURSEMENT & CREDIT EVALUATION
+          </p>
+
+          {/* Stark Stats Column */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: '0.75rem',
+            marginBottom: '3rem', textAlign: 'left',
+          }}>
+            {[
+              { value: 'KES 2.4B+', label: 'TOTAL DISBURSED' },
+              { value: '15,000+', label: 'ACTIVE BORROWERS' },
+              { value: '99.8%', label: 'UPTIME SLA' },
+            ].map((s, i) => (
+              <div key={i} style={{
+                padding: '0.75rem 1rem',
+                border: `1px solid ${THEME.colors.textMuted}`,
+                background: '#09090b',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderRadius: '4px',
+              }}>
+                <div style={{ fontSize: '0.6875rem', color: THEME.colors.textMuted, fontWeight: 500 }}>
+                  {s.label}
+                </div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: THEME.colors.white }}>
+                  {s.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Grayscale Badges */}
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center',
+            fontSize: '0.625rem', color: THEME.colors.textMuted, fontWeight: 600,
+          }}>
+            <span>[ SOC 2 COMPLIANT ]</span>
+            <span>[ CBK LICENSED ]</span>
+            <span>[ ENCRYPTED ]</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── RIGHT: Login Form Panel ─── */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '3rem',
+        background: THEME.colors.surface,
+      }}>
+        <div style={{ width: '100%', maxWidth: 360 }}>
+          {/* Header */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h2 style={{
+              fontSize: '1.375rem', fontWeight: 800, color: THEME.colors.black,
+              letterSpacing: '-0.03em', marginBottom: '0.5rem',
+              textTransform: 'uppercase',
+            }}>
+              Console Authenticator
             </h2>
-            <p className="mt-1 text-xs uppercase tracking-[0.3em] text-desert-500 font-semibold">
-              Admin Portal
+            <p style={{ fontSize: '0.75rem', color: THEME.colors.textMuted, fontWeight: 500 }}>
+              ENTER SYSTEM PRIVILEGES TO RE-ROUTE PORTFOLIO
             </p>
           </div>
 
+          {/* Error message in monochrome */}
           {error && (
-            <div className="mb-6 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 flex items-center gap-2">
-              <span className="text-red-600">⚠️</span>
-              <span>{error}</span>
+            <div style={{
+              marginBottom: '1.5rem', padding: '0.75rem 1rem',
+              background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              fontSize: '0.75rem',
+              borderRadius: '4px',
+            }}>
+              <span style={{ fontWeight: 'bold' }}>[!] ERROR:</span>
+              <span style={{ color: THEME.colors.black, fontWeight: 'bold' }}>{error.toUpperCase()}</span>
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {/* Email Field */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-                Email Address
+              <label style={{
+                display: 'block', fontSize: '0.6875rem', fontWeight: 700,
+                color: THEME.colors.black, marginBottom: '0.5rem',
+              }}>
+                EMAIL ADDRESS
               </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="premium-input w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder-slate-500"
-                  placeholder="name@karibucredit.co.ke"
-                  required
-                />
-              </div>
+              <input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@karibucredit.co.ke"
+                required
+                style={{
+                  width: '100%', padding: '0.75rem 1rem',
+                  background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
+                  fontSize: '0.8125rem', color: THEME.colors.black,
+                  outline: 'none', transition: 'all 0.1s ease',
+                  borderRadius: '4px',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+                onFocus={e => { e.target.style.boxShadow = `0 0 0 2px ${THEME.colors.black}`; }}
+                onBlur={e => { e.target.style.boxShadow = 'none'; }}
+              />
             </div>
 
+            {/* Password Field */}
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-                Password
-              </label>
-              <div className="relative">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{
+                  fontSize: '0.6875rem', fontWeight: 700, color: THEME.colors.black,
+                }}>
+                  SECURITY KEY
+                </label>
+                <button type="button" style={{
+                  background: 'none', border: 'none', fontSize: '0.625rem',
+                  color: THEME.colors.textMuted, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: "'Inter', sans-serif",
+                }}>
+                  [ FORGOT KEY ]
+                </button>
+              </div>
+              <div style={{ position: 'relative' }}>
                 <input
-                  type="password"
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="premium-input w-full rounded-2xl px-4 py-3 text-sm outline-none placeholder-••••••••"
                   placeholder="••••••••"
                   required
+                  style={{
+                    width: '100%', padding: '0.75rem 2.5rem 0.75rem 1rem',
+                    background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
+                    fontSize: '0.8125rem', color: THEME.colors.black,
+                    outline: 'none', transition: 'all 0.1s ease',
+                    borderRadius: '4px',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                  onFocus={e => { e.target.style.boxShadow = `0 0 0 2px ${THEME.colors.black}`; }}
+                  onBlur={e => { e.target.style.boxShadow = 'none'; }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  style={{
+                    position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', color: THEME.colors.black, cursor: 'pointer',
+                    display: 'flex', padding: 0,
+                  }}
+                >
+                  {showPassword ? (
+                    <span style={{ fontSize: 10, fontWeight: 'bold' }}>HIDE</span>
+                  ) : (
+                    <span style={{ fontSize: 10, fontWeight: 'bold' }}>SHOW</span>
+                  )}
+                </button>
               </div>
             </div>
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="relative w-full overflow-hidden group rounded-2xl bg-gradient-to-r from-amber-500 to-desert-500 hover:from-amber-600 hover:to-desert-600 py-3.5 text-sm font-semibold text-white transition-all duration-300 hover:shadow-[0_0_25px_rgba(15,180,195,0.4)] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                    Authenticating...
-                  </span>
-                ) : (
-                  "Sign In to Console"
-                )}
-              </button>
-            </div>
+            {/* Submit Button */}
+            <button
+              id="login-submit"
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%', padding: '0.875rem',
+                background: THEME.colors.black,
+                color: THEME.colors.white, border: `1px solid ${THEME.colors.black}`,
+                fontSize: '0.75rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer',
+                transition: 'all 0.15s ease',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                letterSpacing: '0.05em',
+                marginTop: '0.5rem',
+                borderRadius: '4px',
+                fontFamily: "'Inter', sans-serif",
+              }}
+              onMouseEnter={e => { if (!loading) { (e.target as HTMLElement).style.background = THEME.colors.grayDark; } }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.background = THEME.colors.black; }}
+            >
+              {loading ? (
+                <span>[ AUTHENTICATING... ]</span>
+              ) : (
+                <span>SIGN IN →</span>
+              )}
+            </button>
           </form>
+
+          {/* Footer */}
+          <div style={{
+            marginTop: '3rem', paddingTop: '1.5rem',
+            borderTop: `1px solid ${THEME.colors.border}`,
+            textAlign: 'center',
+          }}>
+            <p style={{ fontSize: '0.625rem', color: THEME.colors.textMuted, lineHeight: 1.6 }}>
+              PROTECTED BY SECURE ENCLAVE MODULE.
+              <br />
+              © {new Date().getFullYear()} KARIBU CREDIT INC.
+            </p>
+          </div>
         </div>
-        
-        {/* Footer */}
-        <p className="mt-8 text-center text-xs text-slate-500 tracking-wide">
-          © {new Date().getFullYear()} Karibu Credit Inc. All rights reserved.
-        </p>
       </div>
     </div>
   );
 }
-

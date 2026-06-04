@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchApi } from '../../../lib/api';
+import { THEME } from '@/theme';
 
 /* ─── Types ─── */
 type ScheduleLine = {
@@ -51,12 +52,12 @@ function formatDate(d: string | null): string {
 
 function statusColor(s: string): string {
   const map: Record<string, string> = {
-    pending: '#f59e0b', approved: '#0ea5e9', disbursed: '#6366f1',
-    active: '#10b981', cleared: '#10b981', defaulted: '#ef4444',
-    rejected: '#64748b', PENDING: '#f59e0b', PAID: '#10b981',
-    PARTIAL: '#0ea5e9', OVERDUE: '#ef4444',
+    pending: '#71717a', approved: '#000000', disbursed: '#000000',
+    active: '#000000', cleared: '#000000', defaulted: '#18181b',
+    rejected: '#71717a', PENDING: '#71717a', PAID: '#000000',
+    PARTIAL: '#71717a', OVERDUE: '#18181b',
   };
-  return map[s] || '#64748b';
+  return map[s] || '#71717a';
 }
 
 export default function CustomerPortalPage() {
@@ -111,7 +112,6 @@ export default function CustomerPortalPage() {
     if (!payingLoanId || !payAmount) return;
     setPaySubmitting(true);
     try {
-      // In production, this triggers an M-Pesa STK push. Here we simulate it.
       alert(`🟢 Payment simulation: KES ${parseFloat(payAmount).toLocaleString()} for Loan #${payingLoanId}\n\nIn production, this triggers an M-Pesa STK push to your registered phone number.`);
       setPayAmount('');
       setPayingLoanId(null);
@@ -122,9 +122,9 @@ export default function CustomerPortalPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="skeleton" style={{ height: 48, borderRadius: 14 }} />
+          <div key={i} className="skeleton" style={{ height: 48, borderRadius: 0 }} />
         ))}
       </div>
     );
@@ -132,45 +132,31 @@ export default function CustomerPortalPage() {
 
   if (error) {
     return (
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '2rem' }}>
-        <p style={{ color: 'var(--danger)', fontSize: '0.875rem' }}>⚠ {error}</p>
+      <div className={THEME.classes.card}>
+        <p className="text-black font-mono text-xs uppercase tracking-wider">⚠ {error}</p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="space-y-6">
       {/* ─── Header ─── */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(14,165,233,0.08) 100%)',
-        border: '1px solid var(--border)', borderRadius: 20,
-        padding: '1.75rem 2rem', boxShadow: 'var(--shadow-card)',
-      }}>
-        <p style={{ fontSize: '0.625rem', fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#0ea5e9' }}>
-          Self-Service
-        </p>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>
-          Customer Portal
-        </h2>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.6, maxWidth: 550 }}>
+      <div className={THEME.classes.card}>
+        <p className={THEME.classes.subtitle}>Self-Service</p>
+        <h2 className={THEME.classes.title + " mt-1"}>Customer Portal</h2>
+        <p className="text-xs text-zinc-500 mt-2 leading-relaxed max-w-2xl">
           View your active loans, track repayment progress, view upcoming installments, and initiate payments or top-up requests.
         </p>
       </div>
 
       {/* ─── Loan Cards Row ─── */}
       {loans.length === 0 ? (
-        <div style={{
-          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-          padding: '3rem', textAlign: 'center',
-        }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.2" style={{ margin: '0 auto 1rem', opacity: 0.4 }}>
-            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>No Active Loans</p>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>You currently have no loan records. Contact your loan officer to apply.</p>
+        <div className={THEME.classes.card + " py-12 text-center"}>
+          <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest">No Active Loans found</p>
+          <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mt-1">Contact your loan officer to apply.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(loans.length, 3)}, 1fr)`, gap: '1rem' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {loans.map((loan) => {
             const pct = loan.total_payable ? Math.round((loan.total_paid / loan.total_payable) * 100) : 0;
             const isActive = loan.id === selectedLoanId;
@@ -178,75 +164,58 @@ export default function CustomerPortalPage() {
               <div
                 key={loan.id}
                 onClick={() => setSelectedLoanId(loan.id)}
-                style={{
-                  background: 'var(--surface)',
-                  border: `1px solid ${isActive ? 'rgba(99,102,241,0.4)' : 'var(--border)'}`,
-                  borderRadius: 16, padding: '1.25rem', cursor: 'pointer',
-                  boxShadow: isActive ? 'var(--shadow-md)' : 'var(--shadow-sm)',
-                  transition: 'all 0.2s ease',
-                  position: 'relative', overflow: 'hidden',
-                }}
+                className={`p-5 cursor-pointer border transition-colors duration-150 relative ${
+                  isActive ? 'border-black bg-zinc-50' : 'border-zinc-200 bg-white hover:bg-zinc-50'
+                }`}
               >
-                {/* Top accent bar */}
                 <div style={{
                   position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-                  background: `linear-gradient(90deg, ${statusColor(loan.status)}, transparent)`,
+                  background: statusColor(loan.status),
                 }} />
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 700, color: '#6366f1' }}>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-mono text-xs font-bold text-black">
                     {loan.application_no || `#${loan.id}`}
                   </span>
-                  <span style={{
-                    fontSize: '0.5625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                    padding: '2px 8px', borderRadius: 99,
-                    background: `${statusColor(loan.status)}15`,
-                    color: statusColor(loan.status),
-                    border: `1px solid ${statusColor(loan.status)}30`,
-                  }}>
+                  <span className={isActive ? THEME.classes.badgeFilled : THEME.classes.badgeOutline}>
                     {loan.status}
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 10 }}>
+                <div className="grid grid-cols-2 gap-4 mb-4 font-mono text-xs uppercase">
                   <div>
-                    <p style={{ fontSize: '0.5625rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Principal</p>
-                    <p style={{ fontSize: '0.9375rem', fontWeight: 700 }}>KES {loan.principal_amount?.toLocaleString()}</p>
+                    <p className="text-[9px] text-zinc-400 font-bold">Principal</p>
+                    <p className="font-bold text-black">KES {loan.principal_amount?.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p style={{ fontSize: '0.5625rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Outstanding</p>
-                    <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#ef4444' }}>KES {loan.outstanding_balance?.toLocaleString()}</p>
+                    <p className="text-[9px] text-zinc-400 font-bold">Outstanding</p>
+                    <p className="font-bold text-black">KES {loan.outstanding_balance?.toLocaleString()}</p>
                   </div>
                 </div>
 
                 {/* Progress bar */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.5625rem', color: 'var(--text-muted)', marginBottom: 3 }}>
-                    <span>Repayment Progress</span>
-                    <span style={{ fontWeight: 700, color: pct >= 100 ? '#10b981' : '#0ea5e9' }}>{pct}%</span>
+                <div className="mb-4">
+                  <div className="flex justify-between font-mono text-[9px] text-zinc-400 uppercase font-bold mb-1">
+                    <span>Progress</span>
+                    <span>{pct}%</span>
                   </div>
-                  <div style={{ height: 5, background: 'var(--surface-2)', borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', borderRadius: 99,
-                      width: `${Math.min(100, pct)}%`,
-                      background: pct >= 100
-                        ? '#10b981'
-                        : 'linear-gradient(90deg, #6366f1, #0ea5e9)',
-                      transition: 'width 0.6s ease',
-                    }} />
+                  <div className="h-1.5 w-full bg-zinc-200 overflow-hidden">
+                    <div
+                      className="h-full bg-black transition-all duration-300"
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
-                  <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
-                    {loan.product_type.toUpperCase()} · {loan.tenure_months}mo · {loan.interest_rate}%
+                <div className="flex justify-between items-center pt-2 border-t border-zinc-100">
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">
+                    {loan.product_type} · {loan.tenure_months}mo
                   </span>
                   <button
-                    className="btn btn-ghost"
-                    style={{ fontSize: '0.625rem', padding: '0.15rem 0.4rem', color: '#10b981' }}
+                    className="border border-black bg-black text-white px-2 py-0.5 text-[9px] font-mono uppercase font-bold tracking-widest hover:bg-zinc-800"
                     onClick={(e) => { e.stopPropagation(); setPayingLoanId(loan.id); }}
                   >
-                    Pay →
+                    Pay
                   </button>
                 </div>
               </div>
@@ -257,99 +226,90 @@ export default function CustomerPortalPage() {
 
       {/* ─── Schedule + Details ─── */}
       {activeLoan && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.25rem' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Repayment Schedule */}
-          <div style={{
-            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-            overflow: 'hidden', boxShadow: 'var(--shadow-card)',
-          }}>
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
-              <p style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                Repayment Schedule
-              </p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+          <div className={`${THEME.classes.card} lg:col-span-8`}>
+            <div className="border-b border-black pb-3 mb-4">
+              <h3 className={THEME.classes.sectionTitle}>Repayment Schedule</h3>
+              <p className="text-xs text-zinc-500 font-mono mt-0.5">
                 Loan #{activeLoan.id} — {formatDate(activeLoan.first_due_date)} to {formatDate(activeLoan.final_due_date)}
               </p>
             </div>
 
             {scheduleLoading ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
+              <div className="p-8 text-center text-xs font-mono text-zinc-400 uppercase tracking-widest">
                 Loading schedule…
               </div>
             ) : schedule.length === 0 ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                No schedule lines available. The loan may not have been approved yet.
+              <div className="p-8 text-center text-xs font-mono text-zinc-400 uppercase tracking-widest">
+                No schedule lines available.
               </div>
             ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Principal</th>
-                    <th>Interest</th>
-                    <th>Total Due</th>
-                    <th>Remaining</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {schedule.map((line: any, idx: number) => (
-                    <tr key={idx}>
-                      <td style={{ fontWeight: 600, color: '#6366f1' }}>{line.installment_no}</td>
-                      <td>KES {line.principal_due?.toLocaleString()}</td>
-                      <td style={{ color: '#f59e0b' }}>KES {line.interest_due?.toLocaleString()}</td>
-                      <td style={{ fontWeight: 700 }}>KES {line.total_due?.toLocaleString()}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>KES {line.remaining_principal?.toLocaleString()}</td>
+              <div className="overflow-x-auto border border-black">
+                <table className="min-w-full text-left text-xs font-mono">
+                  <thead className="bg-black text-white uppercase tracking-wider text-[10px] border-b border-black">
+                    <tr>
+                      <th className="px-4 py-3 font-bold">#</th>
+                      <th className="px-4 py-3 font-bold">Principal</th>
+                      <th className="px-4 py-3 font-bold">Interest</th>
+                      <th className="px-4 py-3 font-bold">Total Due</th>
+                      <th className="px-4 py-3 font-bold">Remaining</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-black">
+                    {schedule.map((line: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-zinc-50 transition-colors">
+                        <td className="px-4 py-3 font-bold text-black">{line.installment_no}</td>
+                        <td className="px-4 py-3">KES {line.principal_due?.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-zinc-500">KES {line.interest_due?.toLocaleString()}</td>
+                        <td className="px-4 py-3 font-bold text-black">KES {line.total_due?.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-zinc-400">KES {line.remaining_principal?.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
           {/* Loan Details Card */}
-          <div style={{
-            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-            padding: '1.25rem', boxShadow: 'var(--shadow-card)',
-            display: 'flex', flexDirection: 'column', gap: '0.875rem',
-          }}>
-            <h4 style={{ fontWeight: 700, fontSize: '0.875rem' }}>Loan Details</h4>
+          <div className={`${THEME.classes.card} lg:col-span-4 space-y-4`}>
+            <h4 className={THEME.classes.sectionTitle}>Loan Details</h4>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="space-y-2 font-mono text-xs uppercase border-b border-black pb-3">
               {[
                 { label: 'Application No', value: activeLoan.application_no || `#${activeLoan.id}` },
-                { label: 'Product', value: activeLoan.product_type.toUpperCase() },
+                { label: 'Product', value: activeLoan.product_type },
                 { label: 'Principal', value: `KES ${activeLoan.principal_amount?.toLocaleString()}` },
                 { label: 'Interest Rate', value: `${activeLoan.interest_rate}% / month` },
                 { label: 'Tenure', value: `${activeLoan.tenure_months} months` },
                 { label: 'Total Payable', value: `KES ${activeLoan.total_payable?.toLocaleString() || '—'}` },
-                { label: 'Amount Paid', value: `KES ${activeLoan.total_paid?.toLocaleString()}`, color: '#10b981' },
-                { label: 'Outstanding', value: `KES ${activeLoan.outstanding_balance?.toLocaleString()}`, color: '#ef4444' },
-                { label: 'Penalties', value: `KES ${activeLoan.penalty_balance?.toLocaleString()}`, color: activeLoan.penalty_balance > 0 ? '#ef4444' : undefined },
+                { label: 'Amount Paid', value: `KES ${activeLoan.total_paid?.toLocaleString()}` },
+                { label: 'Outstanding', value: `KES ${activeLoan.outstanding_balance?.toLocaleString()}` },
+                { label: 'Penalties', value: `KES ${activeLoan.penalty_balance?.toLocaleString()}` },
                 { label: 'First Due', value: formatDate(activeLoan.first_due_date) },
                 { label: 'Final Due', value: formatDate(activeLoan.final_due_date) },
-                { label: 'Disbursement', value: activeLoan.disbursement_method?.replace(/_/g, ' ').toUpperCase() },
+                { label: 'Disbursement', value: activeLoan.disbursement_method?.replace(/_/g, ' ') },
               ].map((row) => (
-                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0', borderBottom: '1px solid var(--border)' }}>
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{row.label}</span>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: (row as any).color || 'var(--text-primary)' }}>{row.value}</span>
+                <div key={row.label} className="flex justify-between items-center py-1 border-b border-zinc-100 last:border-b-0">
+                  <span className="text-zinc-500 text-[10px]">{row.label}</span>
+                  <span className="font-bold text-black text-[10px]">{row.value}</span>
                 </div>
               ))}
             </div>
 
             {/* Quick Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+            <div className="space-y-2">
               <button
-                className="btn btn-primary"
-                style={{ width: '100%', fontSize: '0.75rem' }}
+                className={THEME.classes.btnPrimary + " w-full"}
                 onClick={() => setPayingLoanId(activeLoan.id)}
               >
                 Make Payment
               </button>
               {['disbursed', 'active'].includes(activeLoan.status) && (
                 <button
-                  className="btn btn-secondary"
-                  style={{ width: '100%', fontSize: '0.75rem' }}
-                  onClick={() => alert('Top-up request feature: Navigate to the Top-Up Applications page from the sidebar to apply.')}
+                  className={THEME.classes.btnSecondary + " w-full"}
+                  onClick={() => alert('Navigate to the Top-Up page in the sidebar to apply.')}
                 >
                   Request Top-Up
                 </button>
@@ -361,106 +321,74 @@ export default function CustomerPortalPage() {
 
       {/* ─── Recent Transactions ─── */}
       {transactions.length > 0 && (
-        <div style={{
-          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-          overflow: 'hidden', boxShadow: 'var(--shadow-card)',
-        }}>
-          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
-            <p style={{ fontSize: '0.625rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-              Recent Transactions
-            </p>
+        <div className={THEME.classes.card}>
+          <div className="border-b border-black pb-3 mb-4">
+            <h3 className={THEME.classes.sectionTitle}>Recent Transactions</h3>
           </div>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Amount</th>
-                <th>Reference</th>
-                <th>Loan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.slice(0, 10).map((tx) => (
-                <tr key={tx.id}>
-                  <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatDate(tx.created_at)}</td>
-                  <td>
-                    <span style={{
-                      fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase',
-                      color: tx.type === 'repayment' ? '#10b981'
-                        : tx.type === 'disbursement' ? '#6366f1'
-                        : tx.type === 'penalty' ? '#ef4444' : '#64748b',
-                    }}>
-                      {tx.type}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: 700 }}>KES {tx.amount?.toLocaleString()}</td>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.6875rem', color: 'var(--text-muted)' }}>{tx.reference_code}</td>
-                  <td style={{ fontSize: '0.75rem' }}>#{tx.loan_id}</td>
+          <div className="overflow-x-auto border border-black">
+            <table className="min-w-full text-left text-xs font-mono">
+              <thead className="bg-black text-white uppercase tracking-wider text-[10px] border-b border-black">
+                <tr>
+                  <th className="px-4 py-3 font-bold">Date</th>
+                  <th className="px-4 py-3 font-bold">Type</th>
+                  <th className="px-4 py-3 font-bold">Amount</th>
+                  <th className="px-4 py-3 font-bold">Reference</th>
+                  <th className="px-4 py-3 font-bold">Loan</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-black">
+                {transactions.slice(0, 10).map((tx) => (
+                  <tr key={tx.id} className="hover:bg-zinc-50 transition-colors">
+                    <td className="px-4 py-3 text-zinc-500">{formatDate(tx.created_at)}</td>
+                    <td className="px-4 py-3 font-bold text-black uppercase">{tx.type}</td>
+                    <td className="px-4 py-3 font-bold text-black">KES {tx.amount?.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-zinc-500 font-bold">{tx.reference_code}</td>
+                    <td className="px-4 py-3 font-bold text-black">#{tx.loan_id}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* ─── Payment Modal ─── */}
       {payingLoanId && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
-        }}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => setPayingLoanId(null)}
         >
           <form
             onSubmit={submitPayment}
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20,
-              padding: '1.75rem', width: 380, boxShadow: 'var(--shadow-lg)',
-              display: 'flex', flexDirection: 'column', gap: '1rem',
-            }}
+            className={`${THEME.classes.card} w-[380px] space-y-4`}
           >
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: 14, margin: '0 auto 8px',
-                background: 'linear-gradient(135deg, #10b981, #0ea5e9)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                  <path d="M12 4v16m8-8H4" strokeLinecap="round" />
-                </svg>
-              </div>
-              <h3 style={{ fontWeight: 700, fontSize: '1rem' }}>Make Payment</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+            <div className="text-center border-b border-black pb-4">
+              <h3 className={THEME.classes.sectionTitle}>Make Payment</h3>
+              <p className="text-[10px] font-mono text-zinc-500 mt-1">
                 Loan #{payingLoanId} · M-Pesa Paybill
               </p>
             </div>
 
             <div>
-              <label className="form-label">Amount (KES)</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Amount (KES)</label>
               <input
                 type="number"
-                className="form-input"
+                className={THEME.classes.input + " text-center text-lg font-bold"}
                 value={payAmount}
                 onChange={(e) => setPayAmount(e.target.value)}
                 placeholder="e.g. 5000"
                 required
                 min={1}
-                style={{ fontSize: '1.125rem', fontWeight: 700, textAlign: 'center', padding: '0.75rem' }}
               />
             </div>
 
-            <div style={{
-              background: 'var(--surface-2)', borderRadius: 10, padding: '0.625rem 0.75rem',
-              fontSize: '0.6875rem', color: 'var(--text-muted)', lineHeight: 1.6,
-            }}>
-              💡 In production, clicking "Pay Now" triggers an <strong style={{ color: '#10b981' }}>M-Pesa STK Push</strong> to your registered phone number. Confirm the transaction on your device.
+            <div className="bg-zinc-50 border border-black p-3 text-[10px] font-mono text-zinc-500 uppercase tracking-wider leading-relaxed">
+              💡 In simulation: clicking "Pay Now" fires a mock M-Pesa STK Push. In production, this prompts the user device.
             </div>
 
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPayingLoanId(null)}>Cancel</button>
-              <button type="submit" disabled={paySubmitting} className="btn btn-primary" style={{ flex: 2 }}>
+            <div className="flex gap-2 pt-2 border-t border-black/10">
+              <button type="button" className={THEME.classes.btnSecondary + " flex-1"} onClick={() => setPayingLoanId(null)}>Cancel</button>
+              <button type="submit" disabled={paySubmitting} className={THEME.classes.btnPrimary + " flex-1"}>
                 {paySubmitting ? 'Processing…' : 'Pay Now'}
               </button>
             </div>

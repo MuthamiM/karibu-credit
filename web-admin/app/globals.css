@@ -1,54 +1,126 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* ─── Minimalist SaaS Light Palette ─── */
+@theme {
+  --color-brand: #000000;
+  --color-brand-light: #f4f4f5;
+  --color-brand-mid: #18181b;
+  --color-brand-glow: rgba(0, 0, 0, 0.05);
+
+  --color-success: #000000;
+  --color-success-light: #ffffff;
+  --color-success-border: #000000;
+
+  --color-warning: #000000;
+  --color-warning-light: #ffffff;
+  --color-warning-border: #000000;
+
+  --color-danger: #000000;
+  --color-danger-light: #f4f4f5;
+  --color-danger-border: #000000;
+
+  --color-info: #000000;
+  --color-info-light: #ffffff;
+  --color-info-border: #000000;
+
+  /* Grayscale override for Tailwind colors */
+  --color-amber-50: #fafafa;
+  --color-amber-100: #f4f4f5;
+  --color-amber-400: #71717a;
+  --color-amber-500: #000000;
+  --color-amber-600: #18181b;
+  
+  --color-emerald-50: #fafafa;
+  --color-emerald-100: #f4f4f5;
+  --color-emerald-400: #71717a;
+  --color-emerald-500: #000000;
+  --color-emerald-600: #18181b;
+
+  --color-rose-50: #fafafa;
+  --color-rose-100: #f4f4f5;
+  --color-rose-400: #71717a;
+  --color-rose-500: #000000;
+  --color-rose-600: #18181b;
+
+  --color-red-50: #fafafa;
+  --color-red-100: #f4f4f5;
+  --color-red-400: #71717a;
+  --color-red-500: #000000;
+  --color-red-600: #18181b;
+
+  --color-blue-50: #fafafa;
+  --color-blue-100: #f4f4f5;
+  --color-blue-400: #71717a;
+  --color-blue-500: #000000;
+  --color-blue-600: #18181b;
+
+  --color-indigo-50: #fafafa;
+  --color-indigo-100: #f4f4f5;
+  --color-indigo-400: #71717a;
+  --color-indigo-500: #000000;
+  --color-indigo-600: #18181b;
+
+  --color-violet-50: #fafafa;
+  --color-violet-100: #f4f4f5;
+  --color-violet-400: #71717a;
+  --color-violet-500: #000000;
+  --color-violet-600: #18181b;
+
+  --color-desert-50: #fafafa;
+  --color-desert-100: #f4f4f5;
+  --color-desert-400: #71717a;
+  --color-desert-500: #000000;
+  --color-desert-600: #18181b;
+}
+
+/* ─── Minimalist SaaS Grayscale Palette ─── */
 :root {
-  --bg: #f4f6f8;
+  --bg: #fafafa;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --surface-3: #f1f5f9;
-  --border: #eef2f6;
-  --border-strong: #e2e8f0;
+  --surface-2: #f4f4f5;
+  --surface-3: #e4e4e7;
+  --border: #e4e4e7;
+  --border-strong: #000000;
   
-  --text-primary: #1e293b;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-primary: #000000;
+  --text-secondary: #27272a;
+  --text-muted: #71717a;
 
-  --brand: #4f46e5;
-  --brand-light: #eef2ff;
-  --brand-mid: #6366f1;
-  --brand-glow: rgba(79, 70, 229, 0.1);
+  --brand: #000000;
+  --brand-light: #f4f4f5;
+  --brand-mid: #18181b;
+  --brand-glow: rgba(0, 0, 0, 0.05);
 
-  --accent: #0f172a;
-  --accent-light: #f8fafc;
+  --accent: #000000;
+  --accent-light: #f4f4f5;
   
-  --success: #10b981;
-  --success-light: #ecfdf5;
-  --success-border: #a7f3d0;
+  --success: #000000;
+  --success-light: #ffffff;
+  --success-border: #000000;
   
-  --warning: #f59e0b;
-  --warning-light: #fffbeb;
-  --warning-border: #fde68a;
+  --warning: #000000;
+  --warning-light: #ffffff;
+  --warning-border: #000000;
   
-  --danger: #ef4444;
-  --danger-light: #fef2f2;
-  --danger-border: #fecaca;
+  --danger: #000000;
+  --danger-light: #f4f4f5;
+  --danger-border: #000000;
   
-  --info: #3b82f6;
-  --info-light: #eff6ff;
-  --info-border: #bfdbfe;
+  --info: #000000;
+  --info-light: #ffffff;
+  --info-border: #000000;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.04), 0 4px 8px -2px rgba(0, 0, 0, 0.02);
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.03);
-  --shadow-floating: 0 20px 40px -10px rgba(0,0,0,0.05);
-  --shadow-focus: 0 0 0 3px var(--brand-glow);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.05), 0 4px 8px -2px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-floating: 0 20px 40px -10px rgba(0,0,0,0.1);
+  --shadow-focus: 0 0 0 3px rgba(0, 0, 0, 0.15);
 
-  --radius-sm: 6px;
-  --radius: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-sm: 2px;
+  --radius: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
 }
 
 /* ─── Base Styles ─── */
@@ -134,6 +206,9 @@ a {
   border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
   overflow: hidden;
   box-shadow: var(--shadow-md);
   transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
@@ -297,7 +372,7 @@ a {
 .badge-brand {
   background: var(--brand-light);
   color: var(--brand);
-  border: 1px solid rgba(37, 99, 235, 0.2);
+  border: 1px solid var(--border-strong);
 }
 
 /* ─── Premium Buttons ─── */

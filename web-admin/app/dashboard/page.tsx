@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '../../lib/api';
+import { THEME } from '@/theme';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -54,38 +55,29 @@ type CollateralItem = {
 
 /** KPI metric card with SVG icon */
 function KpiCard({
-  label, value, sub, icon, color,
+  label, value, sub, icon,
 }: {
   label: string; value: string | number; sub?: string;
-  icon: React.ReactNode; color: 'blue' | 'teal' | 'green' | 'amber' | 'red' | 'violet';
+  icon: React.ReactNode;
 }) {
-  const colors: Record<string, { bg: string; text: string; card: string }> = {
-    blue:   { bg: '#eef2ff', text: '#4f46e5', card: '#4f46e5' },
-    teal:   { bg: '#f0fdfa', text: '#0d9488', card: '#0d9488' },
-    green:  { bg: '#ecfdf5', text: '#10b981', card: '#10b981' },
-    amber:  { bg: '#fffbeb', text: '#f59e0b', card: '#f59e0b' },
-    red:    { bg: '#fef2f2', text: '#ef4444', card: '#ef4444' },
-    violet: { bg: '#f5f3ff', text: '#8b5cf6', card: '#8b5cf6' },
-  };
-  const c = colors[color];
   return (
-    <div className="stat-card" style={{ padding: '1.75rem', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: c.card }} />
+    <div className={THEME.classes.card} style={{ position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: THEME.colors.black }} />
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'0.75rem' }}>
         <div style={{ flex:1, minWidth:0, paddingLeft: '0.25rem' }}>
-          <div style={{ fontSize:'0.8125rem', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--text-muted)', marginBottom:'0.75rem' }}>
+          <div style={{ fontSize:'9px', fontFamily: 'monospace', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', color:THEME.colors.textMuted, marginBottom:'0.5rem' }}>
             {label}
           </div>
-          <div style={{ fontSize:'1.5rem', fontWeight:700, color:'var(--text-primary)', lineHeight:1.2, letterSpacing:'-0.02em' }}>
+          <div style={{ fontSize:'1.5rem', fontWeight:900, color:THEME.colors.textPrimary, lineHeight:1.2, letterSpacing:'-0.02em', fontFamily: 'monospace' }}>
             {value}
           </div>
           {sub && (
-            <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginTop:'0.35rem', fontWeight:500 }}>
+            <div style={{ fontSize:'9px', color:THEME.colors.textMuted, marginTop:'0.35rem', fontWeight:600, fontFamily: 'monospace', textTransform: 'uppercase' }}>
               {sub}
             </div>
           )}
         </div>
-        <div style={{ width:40, height:40, borderRadius:8, background: c.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color: c.text }}>
+        <div style={{ width:36, height:36, border: '1px solid #000', display:'flex', alignItems:'center', justifyItems:'center', justifyContent:'center', flexShrink:0, color: '#000' }}>
           {icon}
         </div>
       </div>
@@ -99,67 +91,65 @@ function Panel({ title, subtitle, action, children }: {
   action?: React.ReactNode; children: React.ReactNode;
 }) {
   return (
-    <div className="card" style={{ overflow:'hidden' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.5rem', borderBottom:'1px solid var(--border)', gap:'1rem', background: '#fff' }}>
+    <div className={THEME.classes.card} style={{ overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingBottom:'1rem', borderBottom:'1px solid #000', gap:'1rem', background: '#fff' }}>
         <div>
-          <div style={{ fontSize:'1.125rem', fontWeight:600, color:'var(--text-primary)', letterSpacing:'-0.02em', display:'flex', alignItems:'center', gap:'0.5rem' }}>
-            <div style={{ width:4, height:18, background:'var(--brand)', borderRadius:4 }} />
+          <div style={{ fontSize:'0.875rem', fontWeight:700, color:THEME.colors.textPrimary, letterSpacing:'-0.02em', display:'flex', alignItems:'center', gap:'0.5rem', textTransform: 'uppercase', fontFamily: 'monospace' }}>
+            <div style={{ width:4, height:16, background:THEME.colors.black }} />
             {title}
           </div>
-          {subtitle && <div style={{ fontSize:'0.8125rem', color:'var(--text-muted)', marginTop:4, marginLeft:'0.75rem' }}>{subtitle}</div>}
+          {subtitle && <div style={{ fontSize:'10px', color:THEME.colors.textMuted, marginTop:4, marginLeft:'0.75rem', fontFamily: 'monospace', textTransform: 'uppercase' }}>{subtitle}</div>}
         </div>
         {action}
       </div>
-      <div style={{ padding:'1.5rem' }}>{children}</div>
+      <div style={{ paddingTop:'1rem' }}>{children}</div>
     </div>
   );
 }
 
 /** Status badge */
 function Badge({ label, type }: { label: string; type: 'success'|'warning'|'danger'|'info'|'neutral'|'brand' }) {
-  return <span className={`badge badge-${type}`}>{label}</span>;
+  const isFilled = type === 'success' || type === 'brand' || type === 'neutral';
+  return (
+    <span className={isFilled ? THEME.classes.badgeFilled : THEME.classes.badgeOutline}>
+      {label}
+    </span>
+  );
 }
 
 /** Thin progress bar */
-function ProgressBar({ value, color = '#2563eb', bg = '#e2e8f0' }: { value: number; color?: string; bg?: string }) {
+function ProgressBar({ value, color = '#000000', bg = '#f4f4f5' }: { value: number; color?: string; bg?: string }) {
   return (
-    <div style={{ height:6, borderRadius:99, background: bg, overflow:'hidden' }}>
-      <div style={{ height:'100%', width:`${Math.min(value, 100)}%`, background: color, borderRadius:99, transition:'width 0.6s ease' }} />
+    <div style={{ height:6, background: bg, overflow:'hidden', border: '1px solid #000' }}>
+      <div style={{ height:'100%', width:`${Math.min(value, 100)}%`, background: color, transition:'width 0.6s ease' }} />
     </div>
   );
 }
 
 /** Alert/Notice banner */
-function AlertBanner({ icon, title, body, type = 'info' }: {
+function AlertBanner({ icon, title, body }: {
   icon: React.ReactNode; title: string; body: string; type?: 'info'|'warning'|'success'|'danger';
 }) {
-  const colors: Record<string, { bg: string; border: string; text: string }> = {
-    info:    { bg: '#eff6ff', border: '#bfdbfe', text: '#3b82f6' },
-    warning: { bg: '#fffbeb', border: '#fde68a', text: '#d97706' },
-    success: { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a' },
-    danger:  { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' },
-  };
-  const c = colors[type];
   return (
-    <div style={{ background: c.bg, border:`1px solid ${c.border}`, borderRadius:8, padding:'0.875rem 1.25rem', display:'flex', alignItems:'center', gap:'0.875rem' }}>
-      <span style={{ flexShrink:0, color: c.text, display:'flex' }}>{icon}</span>
-      <div style={{ flex:1, fontSize:'0.8125rem' }}>
-        <span style={{ fontWeight:600, color: c.text }}>{title} </span>
-        <span style={{ color:'var(--text-secondary)' }}>{body}</span>
+    <div style={{ background: '#ffffff', border:'1px solid #000000', padding:'0.75rem 1.25rem', display:'flex', alignItems:'center', gap:'0.875rem' }}>
+      <span style={{ flexShrink:0, color: '#000', display:'flex' }}>{icon}</span>
+      <div style={{ flex:1, fontSize:'10px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+        <span style={{ fontWeight:700, color: '#000' }}>{title} </span>
+        <span style={{ color:THEME.colors.textSecondary }}>{body}</span>
       </div>
     </div>
   );
 }
 
 /** Shared table wrapper */
-function DataTable({ headers, children, empty }: {
+function DataTable({ headers, children }: {
   headers: string[]; children: React.ReactNode; empty?: string;
 }) {
   return (
-    <div style={{ overflowX:'auto', borderRadius:8, border:'1px solid var(--border)' }}>
-      <table className="data-table">
-        <thead>
-          <tr>{headers.map(h => <th key={h}>{h}</th>)}</tr>
+    <div style={{ overflowX:'auto', border:'1px solid #000' }}>
+      <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+        <thead style={{ background: '#000', color: '#fff', textTransform: 'uppercase' }}>
+          <tr>{headers.map(h => <th key={h} style={{ padding: '0.625rem 0.875rem', fontWeight: 700, textAlign: 'left', fontSize: '10px' }}>{h}</th>)}</tr>
         </thead>
         <tbody>{children}</tbody>
       </table>
@@ -172,12 +162,12 @@ const CHART_OPTS_BASE = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { labels: { color: '#475569', font: { size: 11, family: 'Inter' }, boxWidth: 12 } },
-    tooltip: { bodyFont: { family: 'Inter', size: 12 }, titleFont: { family: 'Inter', size: 12 } },
+    legend: { labels: { color: '#000000', font: { size: 10, family: 'Inter', weight: 'bold' }, boxWidth: 12 } },
+    tooltip: { backgroundColor: '#000000', bodyFont: { family: 'Inter', size: 11 }, titleFont: { family: 'Inter', size: 11 }, cornerRadius: 0 },
   },
   scales: {
-    x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: '#e2e8f0' } },
-    y: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: '#e2e8f0' } },
+    x: { ticks: { color: '#000000', font: { size: 10 } }, grid: { display: false } },
+    y: { ticks: { color: '#000000', font: { size: 10 } }, grid: { color: '#e4e4e7' } },
   },
 };
 
@@ -190,7 +180,6 @@ export default function DashboardOverview() {
   const [loans,        setLoans]        = useState<LoanItem[]>([]);
   const [borrowers,    setBorrowers]    = useState<BorrowerItem[]>([]);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
-  const [collateral,   setCollateral]   = useState<CollateralItem[]>([]);
   const [stats,        setStats]        = useState<any>({});
   const [loading,      setLoading]      = useState<boolean>(true);
 
@@ -207,18 +196,16 @@ export default function DashboardOverview() {
   useEffect(() => {
     async function load() {
       try {
-        const [s, l, b, t, c] = await Promise.allSettled([
+        const [s, l, b, t] = await Promise.allSettled([
           fetchApi('/loans/stats'),
           fetchApi('/loans/'),
           fetchApi('/users/'),
           fetchApi('/loans/transactions'),
-          fetchApi('/loans/collateral'),
         ]);
         if (s.status === 'fulfilled') setStats(s.value);
         if (l.status === 'fulfilled') setLoans(l.value);
         if (b.status === 'fulfilled') setBorrowers(b.value);
         if (t.status === 'fulfilled') setTransactions(t.value);
-        if (c.status === 'fulfilled') setCollateral(c.value);
       } catch { /* silent */ }
       finally { setLoading(false); }
     }
@@ -227,9 +214,9 @@ export default function DashboardOverview() {
 
   if (loading) {
     return (
-      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', color:'var(--text-muted)', fontSize:'0.875rem', padding:'2rem' }}>
-        <div style={{ width:20, height:20, borderRadius:'50%', border:'2px solid var(--brand)', borderTopColor:'transparent', animation:'spin 0.8s linear infinite' }} />
-        Loading dashboard data…
+      <div className="min-h-[300px] flex items-center justify-center bg-white border border-black p-8 text-black gap-3 font-mono text-xs uppercase tracking-wider">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
+        Loading dashboard data...
       </div>
     );
   }
@@ -279,63 +266,57 @@ function CeoDashboard({ stats, loans, borrowers }: { stats: any; loans: LoanItem
   const barData = {
     labels: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'],
     datasets: [
-      { label: 'Disbursements', data: [12.4, 15.1, 18.2, 14.8, 21.3, 26.0], backgroundColor: '#6366f1', borderRadius: 6 },
-      { label: 'Collections',   data: [8.5,  11.2, 13.6, 12.1, 16.5, 22.4], backgroundColor: '#10b981', borderRadius: 6 },
+      { label: 'Disbursements', data: [12.4, 15.1, 18.2, 14.8, 21.3, 26.0], backgroundColor: THEME.colors.black, borderWidth: 1 },
+      { label: 'Collections',   data: [8.5,  11.2, 13.6, 12.1, 16.5, 22.4], backgroundColor: THEME.colors.textMuted, borderWidth: 1 },
     ],
   };
 
   const doughnutData = {
     labels: ['Logbook Loans', 'SME Capital', 'Agribusiness', 'Personal'],
-    datasets: [{ data: [45, 30, 15, 10], backgroundColor: ['#6366f1','#10b981','#0ea5e9','#f59e0b'], borderWidth: 0, hoverOffset: 6 }],
+    datasets: [{ data: [45, 30, 15, 10], backgroundColor: [THEME.colors.black, '#3f3f46', '#71717a', '#e4e4e7'], borderWidth: 1, borderColor: '#fff' }],
   };
 
-  function varColor(cat: string, v: number) {
-    if (cat === 'income') return '#059669';
-    if (v > 20) return '#dc2626';
-    if (v > 10) return '#d97706';
-    return '#059669';
-  }
-
   return (
-    <div className="fade-in" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+    <div className="fade-in space-y-6">
       <AlertBanner
-        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>}
-        type="info"
+        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>}
         title="Executive Briefing:"
         body="Total Loan Book grew +22.4% MoM. Branch audit compliance completed. PAR 30 is within policy threshold."
       />
 
       {/* KPIs Row 1 */}
-      <div style={{ display:'grid', gap:'1rem', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <KpiCard color="blue"   label="Total Loan Portfolio"   value={`KES ${(stats.total_outstanding_value || 64200000).toLocaleString()}`} sub="+12.4% MoM"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>} />
-        <KpiCard color="green"  label="Monthly Revenue (MTD)"  value={`KES ${(stats.total_repaid || 22400000).toLocaleString()}`} sub="+8.6% of target"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>} />
-        <KpiCard color="teal"   label="Net Profit Margin"      value="24.8%" sub="Within target"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>} />
-        <KpiCard color="violet" label="Active Customers"       value={borrowers.length || 358} sub="+18 this week"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Total Loan Portfolio" value={`KES ${(stats.total_outstanding_value || 64200000).toLocaleString()}`} sub="+12.4% MoM"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="2" y="7" width="20" height="14" rx="0"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>} />
+        <KpiCard label="Monthly Revenue (MTD)" value={`KES ${(stats.total_repaid || 22400000).toLocaleString()}`} sub="+8.6% of target"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>} />
+        <KpiCard label="Net Profit Margin" value="24.8%" sub="Within target"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>} />
+        <KpiCard label="Active Customers" value={borrowers.length || 358} sub="+18 this week"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>} />
       </div>
 
       {/* KPIs Row 2 */}
-      <div style={{ display:'grid', gap:'1rem', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <KpiCard color="teal"  label="Disbursements Today" value="KES 2,450,000" sub="100% Daraja SLA"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>} />
-        <KpiCard color="amber" label="PAR 30 Rate"         value="4.82%" sub="Safe (< 5.0%)"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>} />
-        <KpiCard color="red"   label="NPL Rate (PAR 90+)"  value="1.84%" sub="Safe (< 3.0%)"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>} />
-        <KpiCard color="green"  label="Collection Rate"    value="94.6%" sub="Target: 95.0%"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Disbursements Today" value="KES 2,450,000" sub="100% Daraja SLA"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>} />
+        <KpiCard label="PAR 30 Rate" value="4.82%" sub="Safe (< 5.0%)"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>} />
+        <KpiCard label="NPL Rate (PAR 90+)" value="1.84%" sub="Safe (< 3.0%)"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>} />
+        <KpiCard label="Collection Rate" value="94.6%" sub="Target: 95.0%"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
       </div>
 
       {/* Charts */}
-      <div style={{ display:'grid', gap:'1.5rem', gridTemplateColumns:'2fr 1fr' }}>
-        <Panel title="Disbursements vs Collections" subtitle="KES Millions — last 6 months">
-          <div style={{ height:260 }}>
-            <Bar data={barData} options={CHART_OPTS_BASE as any} />
-          </div>
-        </Panel>
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Panel title="Disbursements vs Collections" subtitle="KES Millions — last 6 months">
+            <div style={{ height:260 }}>
+              <Bar data={barData} options={CHART_OPTS_BASE as any} />
+            </div>
+          </Panel>
+        </div>
         <Panel title="Portfolio by Product Mix">
           <div style={{ height:260, display:'flex', justifyContent:'center' }}>
             <Doughnut
@@ -347,23 +328,23 @@ function CeoDashboard({ stats, loans, borrowers }: { stats: any; loans: LoanItem
       </div>
 
       {/* Branch Health & P&L */}
-      <div style={{ display:'grid', gap:'1.5rem', gridTemplateColumns:'1fr 1fr' }}>
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <Panel title="Branch Portfolio Health" subtitle="Real-time performance">
           <DataTable headers={['Branch Office', 'Portfolio Size', 'PAR 30', 'Collection Rate']}>
             {branches.map((b, i) => (
-              <tr key={i}>
-                <td>
-                  <div style={{ fontWeight:600, color:'var(--text-primary)' }}>{b.name}</div>
-                  <div style={{ fontSize:'0.6875rem', color:'var(--text-muted)' }}>Mgr: {b.manager}</div>
+              <tr key={i} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                <td style={{ padding: '0.75rem 1rem' }}>
+                  <div style={{ fontWeight:700, color:THEME.colors.black }}>{b.name}</div>
+                  <div style={{ fontSize:'9px', color:THEME.colors.textMuted }}>Mgr: {b.manager}</div>
                 </td>
-                <td style={{ fontWeight:600 }}>KES {b.portfolio.toLocaleString()}</td>
-                <td>
+                <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>KES {b.portfolio.toLocaleString()}</td>
+                <td style={{ padding: '0.75rem 1rem' }}>
                   <Badge
                     label={`${b.PAR30}%`}
-                    type={b.PAR30 > 8 ? 'danger' : b.PAR30 > 5 ? 'warning' : 'success'}
+                    type={b.PAR30 > 8 ? 'neutral' : b.PAR30 > 5 ? 'warning' : 'success'}
                   />
                 </td>
-                <td style={{ fontWeight:600, color:'var(--text-primary)' }}>{b.collectionRate}%</td>
+                <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>{b.collectionRate}%</td>
               </tr>
             ))}
           </DataTable>
@@ -372,12 +353,12 @@ function CeoDashboard({ stats, loans, borrowers }: { stats: any; loans: LoanItem
         <Panel title="P&L Budget vs Actual (MTD)" subtitle="Operating performance">
           <DataTable headers={['Account Line', 'Budget', 'Actual', 'Variance']}>
             {plLines.map((pl, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight:600, color:'var(--text-primary)' }}>{pl.line}</td>
-                <td>KES {pl.budget.toLocaleString()}</td>
-                <td style={{ fontWeight:600 }}>KES {pl.actual.toLocaleString()}</td>
-                <td>
-                  <span style={{ fontWeight:700, color: varColor(pl.category, pl.variance) }}>
+              <tr key={i} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>{pl.line}</td>
+                <td style={{ padding: '0.75rem 1rem' }}>KES {pl.budget.toLocaleString()}</td>
+                <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>KES {pl.actual.toLocaleString()}</td>
+                <td style={{ padding: '0.75rem 1rem' }}>
+                  <span style={{ fontWeight:700, color: THEME.colors.black }}>
                     {pl.variance > 0 ? '+' : ''}{pl.variance}%
                   </span>
                 </td>
@@ -403,61 +384,61 @@ function CfoDashboard({ stats, transactions }: { stats: any; transactions: Trans
   ]);
 
   return (
-    <div className="fade-in" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+    <div className="fade-in space-y-6">
       <AlertBanner
-        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>}
-        type="success"
+        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>}
         title="Daraja Status:"
         body="Connected & stable. 99.8% reconciliation SLA maintained over 24 hours."
       />
 
-      <div style={{ display:'grid', gap:'1rem', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <KpiCard color="green"  label="Interest Income MTD"    value="KES 14,820,000"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>} />
-        <KpiCard color="teal"   label="Processing Fees MTD"    value="KES 3,250,000"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>} />
-        <KpiCard color="blue"   label="Insurance Commission"   value="KES 840,000"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>} />
-        <KpiCard color="amber"  label="Operating Expenses"     value="KES 4,120,000"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>} />
-        <KpiCard color="green"  label="Gross Profit MTD"       value="KES 18,910,000"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
-        <KpiCard color="red"    label="Total Provision Reserve" value={`KES ${(stats.total_defaulted_value || 8450000).toLocaleString()}`}
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <KpiCard label="Interest Income MTD" value="KES 14,820,000"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>} />
+        <KpiCard label="Processing Fees MTD" value="KES 3,250,000"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="1" y="4" width="22" height="16" rx="0"/><line x1="1" y1="10" x2="23" y2="10"/></svg>} />
+        <KpiCard label="Insurance Commission" value="KES 840,000"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>} />
+        <KpiCard label="Operating Expenses" value="KES 4,120,000"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>} />
+        <KpiCard label="Gross Profit MTD" value="KES 18,910,000"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
+        <KpiCard label="Total Provision Reserve" value={`KES ${(stats.total_defaulted_value || 8450000).toLocaleString()}`}
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>} />
       </div>
 
       <Panel
         title="Daraja B2C / C2B Settlement Audit"
         subtitle="Auto-updated every 30 seconds"
         action={
-          <span style={{ fontSize:'0.75rem', color:'var(--success)', fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ width:8, height:8, borderRadius:'50%', background:'var(--success)', display:'inline-block' }} />
-            Live
+          <span className={THEME.classes.badgeFilled}>
+            LIVE
           </span>
         }
       >
-        <div style={{ display:'grid', gap:'1.5rem', gridTemplateColumns:'2fr 1fr' }}>
-          <DataTable headers={['Transaction Pool', 'Tx Count', 'Total Value', 'SLA Status']}>
-            {reconciliations.map((r, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight:600, color:'var(--text-primary)' }}>{r.source}</td>
-                <td style={{ fontWeight:700 }}>{r.count}</td>
-                <td style={{ fontWeight:700 }}>KES {r.amount.toLocaleString()}</td>
-                <td><Badge label={r.status} type={r.status === 'PENDING' ? 'warning' : 'success'} /></td>
-              </tr>
-            ))}
-          </DataTable>
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 items-start">
+          <div className="lg:col-span-2">
+            <DataTable headers={['Transaction Pool', 'Tx Count', 'Total Value', 'SLA Status']}>
+              {reconciliations.map((r, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>{r.source}</td>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>{r.count}</td>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>KES {r.amount.toLocaleString()}</td>
+                  <td style={{ padding: '0.75rem 1rem' }}><Badge label={r.status} type={r.status === 'PENDING' ? 'warning' : 'success'} /></td>
+                </tr>
+              ))}
+            </DataTable>
+          </div>
 
-          <div style={{ background:'var(--warning-light)', border:'1px solid #fde68a', borderRadius:12, padding:'1rem', display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-            <div style={{ fontSize:'0.75rem', fontWeight:700, color:'var(--warning)' }}>2 Settlement Discrepancies</div>
-            <p style={{ fontSize:'0.75rem', color:'var(--text-secondary)', lineHeight:1.5 }}>
+          <div className={THEME.classes.card + " space-y-3 bg-zinc-50"}>
+            <div style={{ fontSize:'10px', fontWeight:700, color: '#000', fontFamily: 'monospace' }}>2 Settlement Discrepancies</div>
+            <p style={{ fontSize:'11px', color:THEME.colors.textSecondary, lineHeight:1.5 }}>
               Two KCB API transactions did not return callbacks within the 30-min SLA. Automated recovery cron initiated.
             </p>
-            <div style={{ fontSize:'0.6875rem', fontFamily:'monospace', background:'white', borderRadius:8, padding:'0.625rem', color:'var(--text-secondary)' }}>
+            <div style={{ fontSize:'10px', fontFamily:'monospace', background:'white', border: '1px solid #000', padding:'0.625rem', color:THEME.colors.textSecondary }}>
               <div style={{ display:'flex', justifyContent:'space-between' }}><span>KCB-781A8X</span><strong>KES 50,000</strong></div>
               <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}><span>KCB-902Y1T</span><strong>KES 50,000</strong></div>
             </div>
-            <button className="btn btn-success" style={{ fontSize:'0.75rem', marginTop:'auto' }}>
+            <button className={THEME.classes.btnPrimary + " w-full text-xs"}>
               Re-Trigger Reconciliation
             </button>
           </div>
@@ -466,21 +447,21 @@ function CfoDashboard({ stats, transactions }: { stats: any; transactions: Trans
 
       <Panel
         title="Recent Ledger Transactions"
-        action={<button className="btn btn-secondary" style={{ fontSize:'0.75rem' }}>Export Report →</button>}
+        action={<button className={THEME.classes.btnSecondary + " text-xs"}>Export Report →</button>}
       >
         <DataTable headers={['Tx Ref ID', 'Loan', 'Type', 'Amount', 'Date']}>
           {transactions.slice(0, 8).map(tx => (
-            <tr key={tx.id}>
-              <td style={{ fontWeight:700, fontFamily:'monospace', color:'var(--brand)' }}>{tx.reference_code || `TXN-00${tx.id}`}</td>
-              <td>#{tx.loan_id}</td>
-              <td>
+            <tr key={tx.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
+              <td style={{ padding: '0.75rem 1rem', fontWeight:700, fontFamily:'monospace', color:THEME.colors.black }}>{tx.reference_code || `TXN-00${tx.id}`}</td>
+              <td style={{ padding: '0.75rem 1rem' }}>#{tx.loan_id}</td>
+              <td style={{ padding: '0.75rem 1rem' }}>
                 <Badge
                   label={tx.type.toUpperCase()}
-                  type={tx.type === 'repayment' ? 'success' : tx.type === 'disbursement' ? 'brand' : 'info'}
+                  type={tx.type === 'repayment' ? 'success' : tx.type === 'disbursement' ? 'brand' : 'neutral'}
                 />
               </td>
-              <td style={{ fontWeight:700, color:'var(--text-primary)' }}>KES {tx.amount.toLocaleString()}</td>
-              <td>{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '—'}</td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight:700, color:THEME.colors.textPrimary }}>KES {tx.amount.toLocaleString()}</td>
+              <td style={{ padding: '0.75rem 1rem' }}>{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '—'}</td>
             </tr>
           ))}
         </DataTable>
@@ -512,52 +493,54 @@ function BranchManagerDashboard({ loans, borrowers }: { loans: LoanItem[]; borro
   };
 
   const parData = [
-    { label: 'PAR 1–7 Days',   pct: 65, count: 22, color: '#10b981' },
-    { label: 'PAR 8–30 Days',  pct: 22, count: 8,  color: '#f59e0b' },
-    { label: 'PAR 31–90 Days', pct: 10, count: 3,  color: '#ef4444' },
-    { label: 'PAR 90+ Days',   pct: 3,  count: 1,  color: '#991b1b' },
+    { label: 'PAR 1–7 Days',   pct: 65, count: 22 },
+    { label: 'PAR 8–30 Days',  pct: 22, count: 8 },
+    { label: 'PAR 31–90 Days', pct: 10, count: 3 },
+    { label: 'PAR 90+ Days',   pct: 3,  count: 1 },
   ];
 
   return (
-    <div className="fade-in" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
-      <div style={{ display:'grid', gap:'1rem', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))' }}>
-        <KpiCard color="blue"  label="Branch Active Loans"  value={loans.length || 142} sub="As of today"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>} />
-        <KpiCard color="teal"  label="Branch Book Value"    value="KES 24,500,000" sub="+5.2% MoM"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>} />
-        <KpiCard color="green" label="Branch PAR 30 Rate"   value="3.82%" sub="Within target"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>} />
-        <KpiCard color="amber" label="Manager Escalations"  value="3 Pending" sub="Awaiting review"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>} />
+    <div className="fade-in space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Branch Active Loans" value={loans.length || 142} sub="As of today"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>} />
+        <KpiCard label="Branch Book Value" value="KES 24,500,000" sub="+5.2% MoM"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>} />
+        <KpiCard label="Branch PAR 30 Rate" value="3.82%" sub="Within target"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>} />
+        <KpiCard label="Manager Escalations" value="3 Pending" sub="Awaiting review"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>} />
       </div>
 
-      <div style={{ display:'grid', gap:'1.5rem', gridTemplateColumns:'2fr 1fr' }}>
-        <Panel title="Branch Officer Performance Board" subtitle="TAT and collection rates per officer">
-          <DataTable headers={['Loan Officer', 'Apps Assigned', 'Avg TAT', 'PAR 30']}>
-            {officers.map((o, i) => (
-              <tr key={i}>
-                <td style={{ fontWeight:600, color:'var(--text-primary)' }}>{o.name}</td>
-                <td>{o.assigned} apps</td>
-                <td style={{ fontWeight:600, color: o.tat > 24 ? 'var(--danger)' : o.tat > 20 ? 'var(--warning)' : 'var(--text-primary)' }}>
-                  {o.tat} hrs
-                </td>
-                <td>
-                  <Badge label={`${o.PAR30}%`} type={o.PAR30 > 8 ? 'danger' : o.PAR30 > 5 ? 'warning' : 'success'} />
-                </td>
-              </tr>
-            ))}
-          </DataTable>
-        </Panel>
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Panel title="Branch Officer Performance Board" subtitle="TAT and collection rates per officer">
+            <DataTable headers={['Loan Officer', 'Apps Assigned', 'Avg TAT', 'PAR 30']}>
+              {officers.map((o, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>{o.name}</td>
+                  <td style={{ padding: '0.75rem 1rem' }}>{o.assigned} apps</td>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>
+                    {o.tat} hrs
+                  </td>
+                  <td style={{ padding: '0.75rem 1rem' }}>
+                    <Badge label={`${o.PAR30}%`} type={o.PAR30 > 8 ? 'danger' : o.PAR30 > 5 ? 'warning' : 'success'} />
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </Panel>
+        </div>
 
         <Panel title="Arrears (PAR) Breakdown" subtitle="Accounts currently in arrears">
           <div style={{ display:'flex', flexDirection:'column', gap:'1.25rem' }}>
             {parData.map((p, i) => (
               <div key={i}>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem', fontWeight:500, color:'var(--text-secondary)', marginBottom:6 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', fontWeight:700, color:THEME.colors.textSecondary, marginBottom:6, fontFamily: 'monospace', textTransform: 'uppercase' }}>
                   <span>{p.label}</span>
-                  <span style={{ fontWeight:700, color:'var(--text-primary)' }}>{p.count} ({p.pct}%)</span>
+                  <span>{p.count} ({p.pct}%)</span>
                 </div>
-                <ProgressBar value={p.pct} color={p.color} />
+                <ProgressBar value={p.pct} />
               </div>
             ))}
           </div>
@@ -566,23 +549,23 @@ function BranchManagerDashboard({ loans, borrowers }: { loans: LoanItem[]; borro
 
       <Panel title="High-Value Approval Queue" subtitle="Applications ≥ KES 500,000 escalated to branch manager">
         {highValueLoans.length === 0 ? (
-          <div style={{ padding:'2rem', textAlign:'center', color:'var(--text-muted)', fontSize:'0.8125rem' }}>
+          <div style={{ padding:'2rem', textAlign:'center', color:THEME.colors.textMuted, fontSize:'11px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
             No high-value applications pending branch manager approval.
           </div>
         ) : (
           <DataTable headers={['Reference', 'Borrower', 'Product', 'Amount', 'Action']}>
             {highValueLoans.map(l => (
-              <tr key={l.id}>
-                <td style={{ fontWeight:700, color:'var(--brand)', fontFamily:'monospace' }}>{l.application_no || `LAF-${l.id}`}</td>
-                <td>User #{l.user_id}</td>
-                <td style={{ textTransform:'capitalize' }}>{l.product_type}</td>
-                <td style={{ fontWeight:700, color:'var(--text-primary)' }}>KES {l.principal_amount.toLocaleString()}</td>
-                <td>
+              <tr key={l.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                <td style={{ padding: '0.75rem 1rem', fontWeight:700, color:THEME.colors.black }}>{l.application_no || `LAF-${l.id}`}</td>
+                <td style={{ padding: '0.75rem 1rem' }}>User #{l.user_id}</td>
+                <td style={{ padding: '0.75rem 1rem', textTransform:'uppercase' }}>{l.product_type}</td>
+                <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>KES {l.principal_amount.toLocaleString()}</td>
+                <td style={{ padding: '0.75rem 1rem' }}>
                   <div style={{ display:'flex', gap:'0.5rem' }}>
-                    <button className="btn btn-success" style={{ fontSize:'0.6875rem', padding:'0.35rem 0.75rem' }} onClick={() => handleApprove(l.id)}>
+                    <button className={THEME.classes.btnPrimary + " text-[10px] py-1 px-2.5"} onClick={() => handleApprove(l.id)}>
                       Approve & Disburse
                     </button>
-                    <button className="btn btn-secondary" style={{ fontSize:'0.6875rem', padding:'0.35rem 0.75rem' }} onClick={() => alert('Appraisal requested')}>
+                    <button className={THEME.classes.btnSecondary + " text-[10px] py-1 px-2.5"} onClick={() => alert('Audit requested')}>
                       Audit
                     </button>
                   </div>
@@ -632,81 +615,83 @@ function LoanOfficerDashboard({ loans, borrowers }: { loans: LoanItem[]; borrowe
   ];
 
   return (
-    <div className="fade-in" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
-      <div style={{ display:'grid', gap:'1rem', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <KpiCard color="blue"  label="My Queue Today"      value={`${pendingQueue.length} apps`} sub="Pending review"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>} />
-        <KpiCard color="green" label="Approval Rate (MTD)" value="78.2%" sub="Above target"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
-        <KpiCard color="amber" label="Avg Review TAT"      value="16.4 hrs" sub="SLA: 24h max"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>} />
-        <KpiCard color="teal"  label="Collection Rate"     value="96.8%" sub="Origination"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>} />
+    <div className="fade-in space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="My Queue Today" value={`${pendingQueue.length} apps`} sub="Pending review"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>} />
+        <KpiCard label="Approval Rate (MTD)" value="78.2%" sub="Above target"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
+        <KpiCard label="Avg Review TAT" value="16.4 hrs" sub="SLA: 24h max"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>} />
+        <KpiCard label="Collection Rate" value="96.8%" sub="Origination"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>} />
       </div>
 
-      <div style={{ display:'grid', gap:'1.5rem', gridTemplateColumns:'2fr 1fr' }}>
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-12 items-start">
         {/* Queue */}
-        <Panel title="Application Queue" subtitle="Click a row to start appraisal · 24h SLA">
-          {pendingQueue.length === 0 ? (
-            <div style={{ padding:'3rem', textAlign:'center', color:'var(--text-muted)', fontSize:'0.8125rem' }}>
-              Your application queue is empty — great work!
-            </div>
-          ) : (
-            <DataTable headers={['Reference', 'Borrower', 'Product', 'Amount', '']}>
-              {pendingQueue.map(l => (
-                <tr
-                  key={l.id}
-                  onClick={() => { setSelectedLoan(l); setChecklist({ idVerified:false, kraPINVerified:false, crbStatusGood:false, payslipVerified:false, guarantorAppraisal:false }); }}
-                  style={{ cursor:'pointer', background: selectedLoan?.id === l.id ? 'var(--brand-light)' : undefined }}
-                >
-                  <td style={{ fontWeight:700, fontFamily:'monospace', color:'var(--brand)' }}>{l.application_no || `LAF-${l.id}`}</td>
-                  <td>User #{l.user_id}</td>
-                  <td style={{ textTransform:'capitalize' }}>{l.product_type}</td>
-                  <td style={{ fontWeight:700, color:'var(--text-primary)' }}>KES {l.principal_amount.toLocaleString()}</td>
-                  <td>
-                    <button className="btn btn-secondary" style={{ fontSize:'0.6875rem', padding:'0.25rem 0.625rem' }}>
-                      Open →
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </DataTable>
-          )}
-        </Panel>
+        <div className="lg:col-span-8">
+          <Panel title="Application Queue" subtitle="Click a row to start appraisal · 24h SLA">
+            {pendingQueue.length === 0 ? (
+              <div style={{ padding:'3rem', textAlign:'center', color:THEME.colors.textMuted, fontSize:'11px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                Your application queue is empty — great work!
+              </div>
+            ) : (
+              <DataTable headers={['Reference', 'Borrower', 'Product', 'Amount', '']}>
+                {pendingQueue.map(l => (
+                  <tr
+                    key={l.id}
+                    onClick={() => { setSelectedLoan(l); setChecklist({ idVerified:false, kraPINVerified:false, crbStatusGood:false, payslipVerified:false, guarantorAppraisal:false }); }}
+                    style={{ cursor:'pointer', background: selectedLoan?.id === l.id ? '#f4f4f5' : undefined, borderBottom: '1px solid #e4e4e7' }}
+                  >
+                    <td style={{ padding: '0.75rem 1rem', fontWeight:700, color:THEME.colors.black }}>{l.application_no || `LAF-${l.id}`}</td>
+                    <td style={{ padding: '0.75rem 1rem' }}>User #{l.user_id}</td>
+                    <td style={{ padding: '0.75rem 1rem', textTransform:'uppercase' }}>{l.product_type}</td>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>KES {l.principal_amount.toLocaleString()}</td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <button className={THEME.classes.btnSecondary + " text-[10px] py-1 px-2.5"}>
+                        Open →
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </DataTable>
+            )}
+          </Panel>
+        </div>
 
         {/* Appraisal panel */}
-        <div className="card" style={{ padding:'1.5rem', display:'flex', flexDirection:'column', minHeight:440 }}>
+        <div className={`${THEME.classes.card} lg:col-span-4 flex flex-col min-h-[440px]`}>
           {selectedLoan ? (
             <>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem' }}>
-                <div style={{ fontSize:'0.875rem', fontWeight:700, color:'var(--text-primary)' }}>Appraise Applicant</div>
-                <span className="badge badge-brand">{selectedLoan.application_no || `LAF-${selectedLoan.id}`}</span>
+              <div className="flex justify-between items-center border-b border-black pb-3 mb-4">
+                <div style={{ fontSize:'12px', fontWeight:700, textTransform: 'uppercase', fontFamily: 'monospace' }}>Appraise Applicant</div>
+                <span className={THEME.classes.badgeFilled}>{selectedLoan.application_no || `LAF-${selectedLoan.id}`}</span>
               </div>
 
               {/* Score summary */}
-              <div style={{ background:'var(--surface-2)', border:'1px solid var(--border)', borderRadius:10, padding:'0.875rem', marginBottom:'1rem' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem', marginBottom:6 }}>
-                  <span style={{ color:'var(--text-muted)', fontWeight:600 }}>Credit Score</span>
-                  <span style={{ fontWeight:700, color:'var(--success)' }}>710 / 1000 — GOOD</span>
+              <div className="border border-black bg-zinc-50 p-4 font-mono text-xs uppercase space-y-2 mb-4">
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Credit Score</span>
+                  <span className="font-bold text-black">710 / 1000 — GOOD</span>
                 </div>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem', paddingTop:6, borderTop:'1px solid var(--border)' }}>
-                  <span style={{ color:'var(--text-muted)', fontWeight:600 }}>Recommended Limit</span>
-                  <span style={{ fontWeight:700, color:'var(--text-primary)' }}>KES 500,000</span>
+                <div className="flex justify-between pt-2 border-t border-zinc-200">
+                  <span className="text-zinc-500">Recommended Limit</span>
+                  <span className="font-bold text-black">KES 500,000</span>
                 </div>
               </div>
 
               {/* Checklist */}
-              <div style={{ marginBottom:'1rem' }}>
-                <div style={{ fontSize:'0.6875rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', color:'var(--text-muted)', marginBottom:'0.5rem' }}>
+              <div className="mb-4 space-y-2">
+                <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-100 pb-1">
                   Mandatory Appraisal Steps
                 </div>
                 {CHECKLIST_ITEMS.map(item => (
-                  <label key={item.key} style={{ display:'flex', alignItems:'center', gap:'0.625rem', padding:'0.4rem 0', cursor:'pointer', fontSize:'0.8125rem', color:'var(--text-secondary)' }}>
+                  <label key={item.key} className="flex items-center gap-2.5 cursor-pointer font-mono text-xs uppercase text-zinc-700">
                     <input
                       type="checkbox"
                       checked={checklist[item.key as keyof typeof checklist]}
                       onChange={() => toggleItem(item.key)}
-                      style={{ accentColor:'var(--brand)', width:15, height:15 }}
+                      style={{ accentColor:'#000000', width:14, height:14 }}
                     />
                     {item.label}
                   </label>
@@ -714,25 +699,24 @@ function LoanOfficerDashboard({ loans, borrowers }: { loans: LoanItem[]; borrowe
               </div>
 
               {/* Actions */}
-              <div style={{ marginTop:'auto', display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+              <div className="mt-auto space-y-2 pt-4 border-t border-zinc-100">
                 <button
-                  className="btn btn-success"
+                  className={THEME.classes.btnPrimary + " w-full text-xs"}
                   disabled={!isComplete}
                   onClick={handleApprove}
-                  style={{ fontSize:'0.8125rem', padding:'0.625rem' }}
                 >
                   {isComplete ? 'Approve & Release Funds' : 'Complete checklist to enable'}
                 </button>
-                <div style={{ display:'flex', gap:'0.5rem' }}>
-                  <button className="btn btn-danger" onClick={handleReject} style={{ flex:1, fontSize:'0.75rem' }}>Reject</button>
-                  <button className="btn btn-secondary" onClick={() => alert('Escalated to Branch Manager.')} style={{ flex:1, fontSize:'0.75rem' }}>Escalate</button>
+                <div className="flex gap-2">
+                  <button className={THEME.classes.btnSecondary + " flex-1 text-xs"} onClick={handleReject}>Reject</button>
+                  <button className={THEME.classes.btnSecondary + " flex-1 text-xs"} onClick={() => alert('Escalated to Branch Manager.')}>Escalate</button>
                 </div>
               </div>
             </>
           ) : (
-            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'var(--text-muted)', textAlign:'center', gap:'0.75rem' }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              <div style={{ fontSize:'0.8125rem' }}>Select an application to begin verification and appraisal</div>
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 font-mono text-xs uppercase tracking-widest text-zinc-400">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <div>Select an application to begin appraisal</div>
             </div>
           )}
         </div>
@@ -765,105 +749,107 @@ function CollectionsOfficerDashboard({ loans }: { loans: LoanItem[] }) {
   };
 
   return (
-    <div className="fade-in" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
-      <div style={{ display:'grid', gap:'1rem', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <KpiCard color="red"   label="My Arrears Cases"       value={`${arrearsQueue.length} active`} sub="Require follow-up"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>} />
-        <KpiCard color="teal"  label="Recovery Target (MTD)" value="KES 8,450,000" sub="78% collected"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>} />
-        <KpiCard color="blue"  label="Restructured Accounts" value="12 borrowers" sub="This month"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>} />
-        <KpiCard color="amber" label="CRB Submissions Today" value="2 negative" sub="Listings filed"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>} />
+    <div className="fade-in space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <KpiCard label="Total Delinquent Cases" value={arrearsQueue.length || 18} sub="Outstanding recovery"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>} />
+        <KpiCard label="My Promises to Pay" value="8 active" sub="SLA tracking"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
+        <KpiCard label="Recovery Value (MTD)" value="KES 4,120,000" sub="Target: 5.0M"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>} />
       </div>
 
-      <div style={{ display:'grid', gap:'1.5rem', gridTemplateColumns:'2fr 1fr' }}>
-        {/* Arrears queue */}
-        <Panel title="Arrears Recovery Queue" subtitle="Sorted by delinquency severity">
-          {arrearsQueue.length === 0 ? (
-            <div style={{ padding:'3rem', textAlign:'center', color:'var(--text-muted)', fontSize:'0.8125rem' }}>
-              No accounts currently in delinquency status.
-            </div>
-          ) : (
-            <DataTable headers={['Reference', 'Days Overdue', 'Outstanding', 'Fine Accrued', 'Recommended Action']}>
-              {arrearsQueue.map(c => {
-                const days = c.status === 'defaulted' ? 95 : 12;
-                return (
-                  <tr
-                    key={c.id}
-                    onClick={() => setSelectedCase(c)}
-                    style={{ cursor:'pointer', background: selectedCase?.id === c.id ? '#fff1f2' : undefined }}
-                  >
-                    <td style={{ fontWeight:700, fontFamily:'monospace', color:'var(--danger)' }}>{c.application_no || `LAF-${c.id}`}</td>
-                    <td>
-                      <Badge label={`${days} days`} type={days > 90 ? 'danger' : 'warning'} />
-                    </td>
-                    <td style={{ fontWeight:600 }}>KES {(c.outstanding_balance || 150000).toLocaleString()}</td>
-                    <td style={{ color:'var(--danger)', fontWeight:600 }}>KES {(c.penalty_balance || 15000).toLocaleString()}</td>
-                    <td style={{ fontSize:'0.6875rem', color:'var(--text-muted)' }}>{getAdvice(days)}</td>
-                  </tr>
-                );
-              })}
-            </DataTable>
-          )}
-        </Panel>
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-12 items-start">
+        {/* Recovery queue */}
+        <div className="lg:col-span-8">
+          <Panel title="Arrears &amp; Recovery Queue" subtitle="Click a case to execute follow-up protocols">
+            {arrearsQueue.length === 0 ? (
+              <div style={{ padding:'3rem', textAlign:'center', color:THEME.colors.textMuted, fontSize:'11px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                No active defaults — great portfolio health!
+              </div>
+            ) : (
+              <DataTable headers={['Reference', 'Product', 'Outstanding', 'Penalties', 'Recovery Action']}>
+                {arrearsQueue.map(c => {
+                  const days = c.par_days || 15;
+                  return (
+                    <tr
+                      key={c.id}
+                      onClick={() => setSelectedCase(c)}
+                      style={{ cursor:'pointer', background: selectedCase?.id === c.id ? '#f4f4f5' : undefined, borderBottom: '1px solid #e4e4e7' }}
+                    >
+                      <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>
+                        <div style={{ color:THEME.colors.black }}>{c.application_no || `L-${c.id}`}</div>
+                        <div style={{ fontSize:'9px', color:THEME.colors.textMuted }}>{days} days overdue</div>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', textTransform:'uppercase' }}>{c.product_type}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>KES {(c.outstanding_balance || 150000).toLocaleString()}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>KES {(c.penalty_balance || 15000).toLocaleString()}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontSize:'10px', color:THEME.colors.textMuted }}>{getAdvice(days)}</td>
+                    </tr>
+                  );
+                })}
+              </DataTable>
+            )}
+          </Panel>
+        </div>
 
         {/* Case actions */}
-        <div className="card" style={{ padding:'1.5rem', display:'flex', flexDirection:'column', minHeight:440 }}>
+        <div className={`${THEME.classes.card} lg:col-span-4 flex flex-col min-h-[440px]`}>
           {selectedCase ? (
             <>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem' }}>
-                <div style={{ fontSize:'0.875rem', fontWeight:700 }}>Manage Recovery</div>
-                <span className="badge badge-danger">{selectedCase.application_no || `LAF-${selectedCase.id}`}</span>
+              <div className="flex justify-between items-center border-b border-black pb-3 mb-4 font-mono uppercase text-xs">
+                <div className="font-bold">Manage Recovery</div>
+                <span className={THEME.classes.badgeFilled}>{selectedCase.application_no || `LAF-${selectedCase.id}`}</span>
               </div>
-              <div style={{ background:'var(--danger-light)', border:'1px solid var(--danger-border)', borderRadius:8, padding:'0.875rem', marginBottom:'1rem' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem', marginBottom:6 }}>
-                  <span style={{ color:'var(--danger)', fontWeight:600 }}>Total Overdue</span>
-                  <span style={{ fontWeight:700 }}>KES {((selectedCase.outstanding_balance || 150000) + (selectedCase.penalty_balance || 15000)).toLocaleString()}</span>
+              
+              <div className="border border-black bg-zinc-50 p-4 font-mono text-xs uppercase space-y-2 mb-4">
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Total Overdue</span>
+                  <span className="font-bold">KES {((selectedCase.outstanding_balance || 150000) + (selectedCase.penalty_balance || 15000)).toLocaleString()}</span>
                 </div>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem' }}>
-                  <span style={{ color:'var(--danger)', fontWeight:600 }}>Phone Contact</span>
-                  <span style={{ fontWeight:600, color:'var(--brand-mid)' }}>+254 700 000 000</span>
+                <div className="flex justify-between pt-2 border-t border-zinc-200">
+                  <span className="text-zinc-500">Phone Contact</span>
+                  <span className="font-bold">+254 700 000 000</span>
                 </div>
               </div>
 
               {/* SMS history */}
-              <div style={{ fontSize:'0.6875rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', color:'var(--text-muted)', marginBottom:'0.5rem' }}>
+              <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-zinc-100 pb-1 mb-2">
                 SMS History
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:'1rem', maxHeight:140, overflowY:'auto' }}>
+              <div className="space-y-2 max-h-[140px] overflow-y-auto mb-4 font-mono uppercase text-[9px]">
                 {[
-                  { days:'7 days ago', msg:'Your payment of KES 15,200 is 5 days past due. Late penalty applied.' },
-                  { days:'30 days ago', msg:'CRB Pre-listing Warning: Pay within 7 days to avoid negative listing.' },
+                  { days:'5 days overdue', msg:'Your payment of KES 15,200 is past due. Late penalty applied.' },
+                  { days:'15 days overdue', msg:'CRB Pre-listing Warning: Pay within 7 days to avoid negative listing.' },
                 ].map((s, i) => (
-                  <div key={i} style={{ background:'var(--surface-2)', border:'1px solid var(--border)', borderRadius:8, padding:'0.5rem 0.625rem', fontSize:'0.6875rem' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
-                      <span style={{ color:'var(--text-muted)' }}>{s.days}</span>
-                      <span style={{ color:'var(--success)', fontWeight:600 }}>Delivered</span>
+                  <div key={i} className="border border-zinc-200 bg-white p-2.5 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">{s.days}</span>
+                      <span className="font-bold text-black">Delivered</span>
                     </div>
-                    <p style={{ color:'var(--text-secondary)' }}>"{s.msg}"</p>
+                    <p className="text-zinc-600 font-normal">"{s.msg}"</p>
                   </div>
                 ))}
               </div>
 
-              <div style={{ marginTop:'auto', display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                <button className="btn btn-primary" style={{ background:'var(--warning)', boxShadow:'none', fontSize:'0.8125rem', padding:'0.625rem' }} onClick={() => setRestructureOpen(true)}>
+              <div className="mt-auto space-y-2 pt-4 border-t border-zinc-100">
+                <button className={THEME.classes.btnSecondary + " w-full text-xs"} onClick={() => setRestructureOpen(true)}>
                   Propose Loan Restructuring
                 </button>
-                <div style={{ display:'flex', gap:'0.5rem' }}>
-                  <button className="btn btn-danger" style={{ flex:1, fontSize:'0.75rem' }} onClick={() => alert('CRB Negative Listing registered.')}>
-                    CRB Negative Listing
+                <div className="flex gap-2">
+                  <button className={THEME.classes.btnPrimary + " flex-1 text-xs"} onClick={() => alert('CRB Negative Listing registered.')}>
+                    CRB List
                   </button>
-                  <button className="btn btn-secondary" style={{ flex:1, fontSize:'0.75rem' }} onClick={() => alert('Promise-to-pay logged.')}>
+                  <button className={THEME.classes.btnSecondary + " flex-1 text-xs"} onClick={() => alert('Promise-to-pay logged.')}>
                     Log Promise
                   </button>
                 </div>
               </div>
             </>
           ) : (
-            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:'var(--text-muted)', textAlign:'center', gap:'0.75rem' }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <div style={{ fontSize:'0.8125rem' }}>Select a delinquent account to manage recovery actions</div>
+            <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 font-mono text-xs uppercase tracking-widest text-zinc-400">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div>Select a delinquent case to manage recovery</div>
             </div>
           )}
         </div>
@@ -871,34 +857,34 @@ function CollectionsOfficerDashboard({ loans }: { loans: LoanItem[] }) {
 
       {/* Restructure modal */}
       {restructureOpen && selectedCase && (
-        <div style={{ position:'fixed', inset:0, zIndex:60, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0, 0, 0, 0.4)', backdropFilter:'blur(4px)', padding:'1rem' }}>
-          <div className="card" style={{ width:'100%', maxWidth:440, padding:'1.75rem' }}>
-            <h3 style={{ fontSize:'1.0625rem', fontWeight:700, marginBottom:4 }}>Propose Restructuring Plan</h3>
-            <p style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'1.25rem' }}>
+        <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`${THEME.classes.card} w-full max-w-[440px] space-y-4`}>
+            <h3 className={THEME.classes.sectionTitle}>Propose Restructuring Plan</h3>
+            <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
               Loan: {selectedCase.application_no || `LAF-${selectedCase.id}`}
             </p>
-            <div style={{ marginBottom:'1rem' }}>
-              <label className="form-label">Tenure Extension</label>
-              <select value={tenure} onChange={e => setTenure(e.target.value)} className="form-input">
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Tenure Extension</label>
+              <select value={tenure} onChange={e => setTenure(e.target.value)} className={THEME.classes.input}>
                 <option value="3">Extend by +3 Months</option>
                 <option value="6">Extend by +6 Months</option>
                 <option value="9">Extend by +9 Months</option>
                 <option value="12">Extend by +12 Months</option>
               </select>
             </div>
-            <div style={{ background:'var(--surface-2)', border:'1px solid var(--border)', borderRadius:10, padding:'0.875rem', marginBottom:'1.25rem', fontSize:'0.8125rem' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                <span style={{ color:'var(--text-muted)' }}>New Instalment</span>
-                <strong style={{ color:'var(--success)' }}>KES 12,450 / mo</strong>
+            <div className="border border-black bg-zinc-50 p-4 font-mono text-xs uppercase space-y-2">
+              <div className="flex justify-between">
+                <span className="text-zinc-500">New Instalment</span>
+                <span className="font-bold text-black">KES 12,450 / mo</span>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between' }}>
-                <span style={{ color:'var(--text-muted)' }}>Previous Instalment</span>
-                <strong>KES 18,200 / mo</strong>
+              <div className="flex justify-between pt-2 border-t border-zinc-200">
+                <span className="text-zinc-500">Previous Instalment</span>
+                <span className="font-bold text-zinc-400">KES 18,200 / mo</span>
               </div>
             </div>
-            <div style={{ display:'flex', gap:'0.75rem' }}>
-              <button className="btn btn-primary" style={{ flex:1 }} onClick={handleRestructure}>Forward to Manager</button>
-              <button className="btn btn-secondary" style={{ flex:1 }} onClick={() => setRestructureOpen(false)}>Cancel</button>
+            <div className="flex gap-2 pt-2 border-t border-black/10">
+              <button className={THEME.classes.btnPrimary + " flex-1"} onClick={handleRestructure}>Forward to Manager</button>
+              <button className={THEME.classes.btnSecondary + " flex-1"} onClick={() => setRestructureOpen(false)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -929,10 +915,9 @@ function ComplianceOfficerDashboard({ loans, borrowers, transactions }: { loans:
   };
 
   return (
-    <div className="fade-in" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+    <div className="fade-in space-y-6">
       <AlertBanner
-        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
-        type="warning"
+        icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
         title="Compliance Alert:"
         body="CBK Monthly Returns draft is ready. 3 days remaining to file without penalty."
       />
@@ -943,17 +928,17 @@ function ComplianceOfficerDashboard({ loans, borrowers, transactions }: { loans:
       >
         <DataTable headers={['CBK Filing', 'Due Date', 'Auto-Draft Status', 'Late Penalty', 'Action']}>
           {cbkReports.map((rpt, i) => (
-            <tr key={i}>
-              <td style={{ fontWeight:600, color:'var(--text-primary)' }}>{rpt.name}</td>
-              <td>{rpt.due}</td>
-              <td><Badge label={rpt.autoDraft} type={rpt.autoDraft === 'Completed' ? 'success' : rpt.autoDraft === 'In Progress' ? 'warning' : 'neutral'} /></td>
-              <td style={{ fontSize:'0.6875rem', color:'var(--danger)' }}>{rpt.penalty}</td>
-              <td>
+            <tr key={i} style={{ borderBottom: '1px solid #e4e4e7' }}>
+              <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>{rpt.name}</td>
+              <td style={{ padding: '0.75rem 1rem' }}>{rpt.due}</td>
+              <td style={{ padding: '0.75rem 1rem' }}><Badge label={rpt.autoDraft} type={rpt.autoDraft === 'Completed' ? 'success' : rpt.autoDraft === 'In Progress' ? 'warning' : 'neutral'} /></td>
+              <td style={{ padding: '0.75rem 1rem', fontSize:'10px', color:THEME.colors.black, fontWeight:700 }}>{rpt.penalty}</td>
+              <td style={{ padding: '0.75rem 1rem' }}>
                 <div style={{ display:'flex', gap:6 }}>
-                  <button className="btn btn-primary" style={{ fontSize:'0.6875rem', padding:'0.25rem 0.625rem' }} onClick={() => alert(`${rpt.name} PDF generated.`)}>
+                  <button className={THEME.classes.btnPrimary + " text-[10px] py-1 px-2.5"} onClick={() => alert(`${rpt.name} PDF generated.`)}>
                     Export PDF
                   </button>
-                  <button className="btn btn-secondary" style={{ fontSize:'0.6875rem', padding:'0.25rem 0.625rem' }} onClick={() => alert(`${rpt.name} CSV exported.`)}>
+                  <button className={THEME.classes.btnSecondary + " text-[10px] py-1 px-2.5"} onClick={() => alert(`${rpt.name} CSV exported.`)}>
                     CSV
                   </button>
                 </div>
@@ -963,21 +948,21 @@ function ComplianceOfficerDashboard({ loans, borrowers, transactions }: { loans:
         </DataTable>
       </Panel>
 
-      <div style={{ display:'grid', gap:'1.5rem', gridTemplateColumns:'1fr 1fr' }}>
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <Panel title="AML Transaction Flags" subtitle="Transactions ≥ KES 300,000 requiring review">
           {amlTransactions.length === 0 ? (
-            <div style={{ padding:'2rem', textAlign:'center', color:'var(--text-muted)', fontSize:'0.8125rem' }}>
-              No transactions currently flagged under AML guidelines.
+            <div style={{ padding:'2rem', textAlign:'center', color:THEME.colors.textMuted, fontSize:'11px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+              No transactions flagged under AML guidelines.
             </div>
           ) : (
             <DataTable headers={['Tx Code', 'Type', 'Amount', 'Action']}>
               {amlTransactions.map(tx => (
-                <tr key={tx.id}>
-                  <td style={{ fontWeight:700, fontFamily:'monospace' }}>{tx.reference_code || `TX-${tx.id}`}</td>
-                  <td style={{ textTransform:'capitalize' }}>{tx.type}</td>
-                  <td style={{ fontWeight:700, color:'var(--danger)' }}>KES {tx.amount.toLocaleString()}</td>
-                  <td>
-                    <button className="btn btn-success" style={{ fontSize:'0.6875rem', padding:'0.25rem 0.625rem' }} onClick={() => alert('Flag cleared.')}>
+                <tr key={tx.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>{tx.reference_code || `TX-${tx.id}`}</td>
+                  <td style={{ padding: '0.75rem 1rem', textTransform:'uppercase' }}>{tx.type}</td>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>KES {tx.amount.toLocaleString()}</td>
+                  <td style={{ padding: '0.75rem 1rem' }}>
+                    <button className={THEME.classes.btnPrimary + " text-[10px] py-1 px-2.5"} onClick={() => alert('Flag cleared.')}>
                       Clear Flag
                     </button>
                   </td>
@@ -989,18 +974,18 @@ function ComplianceOfficerDashboard({ loans, borrowers, transactions }: { loans:
 
         <Panel title="KYC Verification Queue" subtitle="48-hour SLA for onboarding">
           {kycQueue.length === 0 ? (
-            <div style={{ padding:'2rem', textAlign:'center', color:'var(--text-muted)', fontSize:'0.8125rem' }}>
-              All accounts have been fully KYC-verified.
+            <div style={{ padding:'2rem', textAlign:'center', color:THEME.colors.textMuted, fontSize:'11px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+              All accounts have been KYC-verified.
             </div>
           ) : (
             <DataTable headers={['Full Name', 'Email', 'Phone', 'Verify']}>
               {kycQueue.map(kyc => (
-                <tr key={kyc.id}>
-                  <td style={{ fontWeight:600, color:'var(--text-primary)' }}>{kyc.full_name}</td>
-                  <td style={{ color:'var(--text-muted)' }}>{kyc.email}</td>
-                  <td>{kyc.phone_number || '+254 700 000 000'}</td>
-                  <td>
-                    <button className="btn btn-primary" style={{ fontSize:'0.6875rem', padding:'0.25rem 0.625rem', background:'var(--info)' }} onClick={() => handleVerifyKyc(kyc.id)}>
+                <tr key={kyc.id} style={{ borderBottom: '1px solid #e4e4e7' }}>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight:700 }}>{kyc.full_name}</td>
+                  <td style={{ padding: '0.75rem 1rem' }}>{kyc.email}</td>
+                  <td style={{ padding: '0.75rem 1rem' }}>{kyc.phone_number || '+254 700 000 000'}</td>
+                  <td style={{ padding: '0.75rem 1rem' }}>
+                    <button className={THEME.classes.btnPrimary + " text-[10px] py-1 px-2.5"} onClick={() => handleVerifyKyc(kyc.id)}>
                       Verify
                     </button>
                   </td>
@@ -1035,68 +1020,71 @@ function CreditScoreDashboard({ loans, borrowers }: { loans: LoanItem[]; borrowe
     datasets: [{
       label: 'Borrower Count',
       data: [12, 45, 92, 148, 61],
-      backgroundColor: ['#ef4444','#f59e0b','#0ea5e9','#6366f1','#10b981'],
-      borderRadius: 6,
+      backgroundColor: [THEME.colors.black, '#3f3f46', '#71717a', '#a1a1aa', '#e4e4e7'],
+      borderWidth: 1,
+      borderColor: '#fff'
     }],
   };
 
   const ELIGIBILITY = [
-    { tier:'Excellent', range:'800–1000', status:'All products, no restrictions',         limit:'KES 1,000,000', color:'var(--success)' },
-    { tier:'Good',      range:'650–799',  status:'All products, standard terms',          limit:'KES 500,000',   color:'var(--success)' },
-    { tier:'Fair',      range:'500–649',  status:'Most products, collateral required',    limit:'KES 200,000',   color:'var(--warning)' },
-    { tier:'Poor',      range:'300–499',  status:'Micro-loans only, 1 guarantor required',limit:'KES 30,000',   color:'var(--danger)'  },
-    { tier:'Very Poor', range:'<300',     status:'Auto-rejected at screening',            limit:'KES 0',         color:'var(--danger)'  },
+    { tier: 'Excellent', range: '800–1000', status: 'All products, no restrictions', limit: 'KES 1,000,000' },
+    { tier: 'Good', range: '650–799', status: 'All products, standard terms', limit: 'KES 500,000' },
+    { tier: 'Fair', range: '500–649', status: 'Most products, collateral required', limit: 'KES 200,000' },
+    { tier: 'Poor', range: '300–499', status: 'Micro-loans only, 1 guarantor required', limit: 'KES 30,000' },
+    { tier: 'Very Poor', range: '<300', status: 'Auto-rejected at screening', limit: 'KES 0' },
   ];
 
   return (
-    <div className="fade-in" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
-      <div style={{ display:'grid', gap:'1rem', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <KpiCard color="green"  label="Avg Portfolio Score"   value="672 / 1000" sub="GOOD — healthy"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
-        <KpiCard color="blue"   label="KYC Verification Rate" value="92.4%" sub="Well above target"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />
-        <KpiCard color="red"    label="CRB Listing Rate"      value="4.2%" sub="Monitor closely"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>} />
-        <KpiCard color="teal"   label="Highest Score"         value="910 / 1000" sub="Top borrower"
-          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} />
+    <div className="fade-in space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Avg Portfolio Credit Score" value="672 / 1000" sub="GOOD — healthy"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>} />
+        <KpiCard label="KYC Verification Rate" value="92.4%" sub="Well above target"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />
+        <KpiCard label="CRB Listing Rate" value="4.2%" sub="Monitor closely"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>} />
+        <KpiCard label="Highest Score" value="910 / 1000" sub="Top borrower"
+          icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>} />
       </div>
 
-      <div style={{ display:'grid', gap:'1.5rem', gridTemplateColumns:'2fr 1fr' }}>
-        <Panel title="Score Distribution Histogram" subtitle="Portfolio credit score spread">
-          <div style={{ height:280 }}>
-            <Bar data={histData} options={CHART_OPTS_BASE as any} />
-          </div>
-        </Panel>
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Panel title="Score Distribution Histogram" subtitle="Portfolio credit score spread">
+            <div style={{ height: 280 }}>
+              <Bar data={histData} options={CHART_OPTS_BASE as any} />
+            </div>
+          </Panel>
+        </div>
 
         <Panel title="Model Weight Tuning" subtitle="Adjust credit scoring parameters">
-          <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {[
-              { key:'repaymentHistory', label:'Repayment History', default: 40 },
-              { key:'accountAge',       label:'Account History Age', default: 20 },
-              { key:'loanUtilisation',  label:'Credit Utilisation', default: 20 },
-              { key:'crbScore',         label:'TransUnion CRB Score', default: 20 },
+              { key: 'repaymentHistory', label: 'Repayment History' },
+              { key: 'accountAge', label: 'Account History Age' },
+              { key: 'loanUtilisation', label: 'Credit Utilisation' },
+              { key: 'crbScore', label: 'TransUnion CRB Score' },
             ].map(item => (
               <div key={item.key}>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.75rem', fontWeight:600, color:'var(--text-secondary)', marginBottom:6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, color: THEME.colors.textSecondary, marginBottom: 6, fontFamily: 'monospace', textTransform: 'uppercase' }}>
                   <span>{item.label}</span>
-                  <span style={{ color:'var(--info)' }}>{weights[item.key as keyof typeof weights]}%</span>
+                  <span>{weights[item.key as keyof typeof weights]}%</span>
                 </div>
                 <input
                   type="range" min={5} max={60}
                   value={weights[item.key as keyof typeof weights]}
                   onChange={e => setWeights(p => ({ ...p, [item.key]: Number(e.target.value) }))}
-                  style={{ width:'100%', accentColor:'var(--info)' }}
+                  style={{ width: '100%', accentColor: THEME.colors.black }}
                 />
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop:'1rem', padding:'0.75rem', borderRadius:8, background: totalWeight === 100 ? 'var(--success-light)' : 'var(--danger-light)', display:'flex', justifyContent:'space-between', fontSize:'0.8125rem', fontWeight:700 }}>
+          <div style={{ marginTop: '1.25rem', padding: '0.75rem', border: '1px solid #000', display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, fontFamily: 'monospace', textTransform: 'uppercase' }}>
             <span>Total:</span>
-            <span style={{ color: totalWeight === 100 ? 'var(--success)' : 'var(--danger)' }}>{totalWeight}% / 100%</span>
+            <span>{totalWeight}% / 100%</span>
           </div>
 
-          <button className="btn btn-primary" onClick={handleApply} style={{ width:'100%', marginTop:'0.875rem', background:'var(--info)' }}>
+          <button className={THEME.classes.btnPrimary + " w-full mt-4 text-xs"} onClick={handleApply}>
             Commit Weights & Re-Score
           </button>
         </Panel>
@@ -1105,11 +1093,11 @@ function CreditScoreDashboard({ loans, borrowers }: { loans: LoanItem[]; borrowe
       <Panel title="Credit Score Tier Eligibility Matrix" subtitle="Automated product eligibility by score band">
         <DataTable headers={['Tier', 'Score Range', 'Eligibility', 'Credit Ceiling']}>
           {ELIGIBILITY.map((row, i) => (
-            <tr key={i}>
-              <td><span style={{ fontWeight:700, color: row.color }}>{row.tier}</span></td>
-              <td style={{ fontFamily:'monospace', fontWeight:600 }}>{row.range}</td>
-              <td style={{ color:'var(--text-secondary)' }}>{row.status}</td>
-              <td style={{ fontWeight:700, color:'var(--text-primary)' }}>{row.limit}</td>
+            <tr key={i} style={{ borderBottom: '1px solid #e4e4e7' }}>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>{row.tier}</td>
+              <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600 }}>{row.range}</td>
+              <td style={{ padding: '0.75rem 1rem', color: THEME.colors.textSecondary }}>{row.status}</td>
+              <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>{row.limit}</td>
             </tr>
           ))}
         </DataTable>

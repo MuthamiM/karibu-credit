@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { fetchApi } from '../../lib/api';
+import { THEME } from '@/theme';
 
 /* ─── Icon helpers ─── */
 function Icon({ d, size = 16 }: { d: string; size?: number }) {
@@ -37,14 +38,14 @@ const ICONS: Record<string, string> = {
 
 /* ─── Role configuration ─── */
 const ROLE_META: Record<string, { label: string; color: string; initial: string }> = {
-  super_admin:   { label: 'CEO / Managing Director', color: '#3b82f6', initial: 'C' },
-  admin:         { label: 'Administrator',           color: '#6366f1', initial: 'A' },
-  finance:       { label: 'CFO / Finance',           color: '#059669', initial: 'F' },
-  branch_manager:{ label: 'Branch Manager',          color: '#d97706', initial: 'B' },
-  loan_officer:  { label: 'Loan Officer',            color: '#0891b2', initial: 'L' },
-  collections:   { label: 'Collections Officer',     color: '#dc2626', initial: 'C' },
-  compliance:    { label: 'Compliance Officer',      color: '#7c3aed', initial: 'C' },
-  credit_engine: { label: 'Credit Scoring Engine',   color: '#0891b2', initial: 'E' },
+  super_admin:   { label: 'CEO / Managing Director', color: '#000000', initial: 'C' },
+  admin:         { label: 'Administrator',           color: '#18181b', initial: 'A' },
+  finance:       { label: 'CFO / Finance',           color: '#27272a', initial: 'F' },
+  branch_manager:{ label: 'Branch Manager',          color: '#3f3f46', initial: 'B' },
+  loan_officer:  { label: 'Loan Officer',            color: '#52525b', initial: 'L' },
+  collections:   { label: 'Collections Officer',     color: '#71717a', initial: 'C' },
+  compliance:    { label: 'Compliance Officer',      color: '#a1a1aa', initial: 'C' },
+  credit_engine: { label: 'Credit Scoring Engine',   color: '#d4d4d8', initial: 'E' },
 };
 
 /* ─── Sidebar navigation sections ─── */
@@ -116,7 +117,6 @@ function getFilteredSections(role: string) {
   if (['compliance','finance'].includes(role)) sys.push(ALL_SECTIONS[3].items[1]);
   if (['finance','credit_engine'].includes(role)) sys.push(ALL_SECTIONS[3].items[2]);
   if (['loan_officer'].includes(role)) sys.push(ALL_SECTIONS[3].items[3]);
-  sys.push(ALL_SECTIONS[3].items[4]); // Always show Documentation
   if (sys.length) filtered.push({ title: 'System & Policy', items: sys });
 
   const ext = [];
@@ -142,6 +142,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [activeRole, setActiveRole] = useState<string>('loan_officer');
   const [loading,    setLoading]    = useState<boolean>(true);
   const [collapsed,  setCollapsed]  = useState<boolean>(false);
+
+  /* Notifications state */
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
+  const [notifications, setNotifications] = useState([
+    { id: 1, text: "New loan application LAF-0034 submitted for review.", read: false, time: "5m ago" },
+    { id: 2, text: "CRB check for Borrower Muthami passed with score 710.", read: true, time: "1h ago" },
+    { id: 3, text: "SMS reminder sent to Borrower Jane Doe (Overdue 3 days).", read: false, time: "2h ago" },
+    { id: 4, text: "System payout KES 150,000 for LAF-0012 disbursed successfully.", read: true, time: "1d ago" },
+  ]);
+
+  const toggleRead = (id: number) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: !n.read } : n));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const filteredNotifications = notifications.filter(n => {
+    if (activeTab === 'unread') return !n.read;
+    if (activeTab === 'read') return n.read;
+    return true;
+  });
 
   useEffect(() => {
     async function fetchProfile() {
@@ -188,11 +212,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading) {
     return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'var(--bg)', gap:'0.75rem', color:'var(--text-secondary)', fontSize:'0.875rem' }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand-mid)" strokeWidth="2" style={{ animation:'spin 0.8s linear infinite' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:THEME.colors.bg, gap:'0.75rem', color:THEME.colors.textSecondary, fontSize:'0.875rem', fontFamily: 'monospace' }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2" style={{ animation:'spin 0.8s linear infinite' }}>
           <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
         </svg>
-        Loading workspace…
+        LOADING WORKSPACE…
       </div>
     );
   }
@@ -201,28 +225,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="dashboard-shell">
       {/* ── MINIMAL FLOATING SIDEBAR ── */}
       <div className="sidebar-layout">
-        <aside className="sidebar-nav fade-in" style={{ width: collapsed ? 68 : 260 }}>
+        <aside className="sidebar-nav fade-in" style={{ width: collapsed ? 68 : 260, borderRadius: 0, border: '1px solid #000' }}>
           {/* Logo */}
-          <div style={{ height: 72, display:'flex', alignItems:'center', gap:'0.875rem', padding: collapsed ? '0 1.1rem' : '0 1.5rem', borderBottom:'1px solid var(--border)', flexShrink:0 }}>
+          <div style={{ height: 72, display:'flex', alignItems:'center', gap:'0.875rem', padding: collapsed ? '0 1.1rem' : '0 1.5rem', borderBottom:'1px solid #000', flexShrink:0 }}>
             <div style={{
-              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-              background: 'var(--brand)',
+              width: 36, height: 36, borderRadius: 0, flexShrink: 0,
+              background: '#000',
               display:'flex', alignItems:'center', justifyContent:'center',
-              color:'#fff', fontWeight:700, fontSize:18,
+              color:'#fff', fontWeight:900, fontSize:18,
             }}>K</div>
             {!collapsed && (
               <div>
-                <div style={{ fontSize: '0.9375rem', fontWeight: 700, color:'var(--text-primary)', letterSpacing:'-0.01em' }}>Karibu Credit</div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 500, color:'var(--text-muted)' }}>Workspace</div>
+                <div style={{ fontSize: '0.9375rem', fontWeight: 900, color:THEME.colors.textPrimary, letterSpacing:'-0.01em', textTransform: 'uppercase', fontFamily: 'monospace' }}>Karibu Credit</div>
+                <div style={{ fontSize: '0.6875rem', fontWeight: 700, color:THEME.colors.textMuted, textTransform: 'uppercase', fontFamily: 'monospace' }}>Workspace</div>
               </div>
             )}
           </div>
 
           {/* Nav */}
-          <nav style={{ flex:1, overflowY:'auto', padding:'1.5rem 0', display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+          <nav style={{ flex:1, minHeight:0, overflowY:'auto', padding:'1.5rem 0', display:'flex', flexDirection:'column', gap:'1.5rem' }}>
             {sections.map((section, si) => (
               <div key={si}>
-                {!collapsed && <p style={{ padding: '0 1.5rem 0.5rem', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{section.title}</p>}
+                {!collapsed && <p style={{ padding: '0 1.5rem 0.5rem', fontSize: '10px', fontWeight: 700, color: THEME.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'monospace' }}>{section.title}</p>}
                 <div style={{ display:'flex', flexDirection:'column' }}>
                   {section.items.map((item) => {
                     const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
@@ -232,7 +256,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         href={item.path}
                         title={collapsed ? item.label : undefined}
                         className={`sidebar-item${active ? ' active' : ''}`}
-                        style={collapsed ? { justifyContent:'center', padding:'0.625rem', margin: '0.25rem 0.625rem', borderRadius: '10px' } : { borderRadius: '10px', margin: '0.125rem 1rem' }}
+                        style={collapsed ? { justifyContent:'center', padding:'0.625rem', margin: '0.25rem 0.625rem', borderRadius: 0 } : { borderRadius: 0, margin: '0.125rem 1rem' }}
                       >
                         <Icon d={ICONS[item.icon]} size={18} />
                         {!collapsed && <span style={{ marginLeft: '4px' }}>{item.label}</span>}
@@ -245,22 +269,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           {/* User card / Footer */}
-          <div style={{ padding:'1rem', borderTop:'1px solid var(--border)', flexShrink:0 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding: '0.5rem', background: 'var(--surface-2)', borderRadius: '12px', marginBottom: '0.5rem' }}>
+          <div style={{ padding:'1rem', borderTop:'1px solid #000', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding: '0.5rem', background: '#f4f4f5', border: '1px solid #000', borderRadius: 0, marginBottom: '0.5rem' }}>
               <div style={{
-                width:36, height:36, borderRadius:10, flexShrink:0,
-                background: `linear-gradient(135deg, ${roleMeta.color}, #0f172a)`,
+                width:36, height:36, borderRadius:0, flexShrink:0,
+                background: `linear-gradient(135deg, ${roleMeta.color}, #000000)`,
                 display:'flex', alignItems:'center', justifyContent:'center',
-                color:'#fff', fontWeight:600, fontSize:15,
+                color:'#fff', fontWeight:900, fontSize:15,
               }}>
                 {(user?.full_name || 'A').charAt(0).toUpperCase()}
               </div>
               {!collapsed && (
-                <div style={{ minWidth:0, flex: 1 }}>
-                  <div style={{ fontSize:'0.875rem', fontWeight:600, color:'var(--text-primary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                <div style={{ minWidth:0, flex: 1, fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize:'0.75rem', fontWeight:700, color:THEME.colors.textPrimary, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                     {user?.full_name || 'Staff Console'}
                   </div>
-                  <div style={{ fontSize:'0.75rem', color: 'var(--text-muted)', fontWeight:500 }}>
+                  <div style={{ fontSize:'9px', color: THEME.colors.textMuted, fontWeight:600 }}>
                     {roleMeta.label}
                   </div>
                 </div>
@@ -270,10 +294,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={handleLogout}
               className="sidebar-item"
-              style={{ width:'100%', background:'transparent', cursor:'pointer', justifyContent: collapsed ? 'center' : undefined, color:'var(--danger)', borderRadius: '10px', padding: collapsed ? '0.625rem' : '0.5rem 1rem', margin: 0 }}
+              style={{ width:'100%', background:'transparent', border: '1px solid #000', cursor:'pointer', justifyContent: collapsed ? 'center' : undefined, color:'#000', borderRadius: 0, padding: collapsed ? '0.625rem' : '0.5rem 1rem', margin: 0, fontFamily: 'monospace', textTransform: 'uppercase', fontSize: '10px', fontWeight: 700 }}
             >
               <Icon d={ICONS.logout} size={18} />
-              {!collapsed && <span style={{ marginLeft: '4px', fontWeight: 600 }}>Sign Out</span>}
+              {!collapsed && <span style={{ marginLeft: '4px' }}>Sign Out</span>}
             </button>
           </div>
         </aside>
@@ -281,45 +305,47 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── CLEAN TOPBAR & MAIN CONTENT ── */}
       <div className="main-content">
-        <header className="topbar">
-          <div style={{ display:'flex', alignItems:'center', gap:'1.25rem' }}>
+        <header className="topbar" style={{ borderBottom: '1px solid #000', gap: '0.75rem' }}>
+          {/* Left: hamburger + page title */}
+          <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', flexShrink: 0, minWidth: 0 }}>
             <button
               onClick={() => setCollapsed(p => !p)}
-              style={{ width:36, height:36, borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--text-secondary)', flexShrink:0, boxShadow: 'var(--shadow-sm)' }}
+              style={{ width:32, height:32, borderRadius:0, background:'#ffffff', border:'1px solid #000', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#000', flexShrink:0 }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M4 6h16M4 12h16M4 18h16"/>
               </svg>
             </button>
-            <div>
-              <h1 style={{ fontSize:'1.25rem', fontWeight:700, color:'var(--text-primary)', letterSpacing:'-0.02em' }}>
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ fontSize:'1rem', fontWeight:900, color:THEME.colors.textPrimary, letterSpacing:'-0.02em', textTransform: 'uppercase', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {pageName(pathname)}
               </h1>
-              <div style={{ fontSize:'0.8125rem', color:'var(--text-muted)', fontWeight:500, marginTop: 2 }}>
-                Welcome back to your workspace
+              <div style={{ fontSize:'9px', color:THEME.colors.textMuted, fontWeight:700, marginTop: 1, textTransform: 'uppercase', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                Workspace
               </div>
             </div>
           </div>
 
-          <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
-            {/* Search Bar (Mockup for UI aesthetics) */}
-            <div style={{ display:'flex', alignItems:'center', background:'var(--surface)', border:'1px solid var(--border)', borderRadius: '10px', padding:'0.45rem 1rem', width: 240, boxShadow: 'var(--shadow-sm)' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              <input type="text" placeholder="Search..." style={{ border:'none', outline:'none', background:'transparent', fontSize:'0.8125rem', marginLeft:'0.5rem', width:'100%', color:'var(--text-primary)' }} disabled />
-            </div>
+          {/* Center: Search (flexible) */}
+          <div style={{ flex: '1 1 auto', minWidth: 0, maxWidth: 200, display:'flex', alignItems:'center', background:'#ffffff', border:'1px solid #000', borderRadius: 0, padding:'0.35rem 0.75rem' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" placeholder="SEARCH..." style={{ border:'none', outline:'none', background:'transparent', fontSize:'9px', fontFamily: 'monospace', textTransform: 'uppercase', marginLeft:'0.4rem', width:'100%', color:THEME.colors.textPrimary }} disabled />
+          </div>
 
+          {/* Right: actions (never shrink) */}
+          <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink: 0 }}>
             {isPrivileged && (
               <div style={{
-                display:'flex', alignItems:'center', gap:'0.5rem',
-                background:'var(--surface)', border:'1px solid var(--border)', boxShadow: 'var(--shadow-sm)',
-                borderRadius:'10px', padding:'0.45rem 1rem',
-                fontSize:'0.8125rem', color:'var(--text-secondary)',
+                display:'flex', alignItems:'center', gap:'0.35rem',
+                background:'#ffffff', border:'1px solid #000',
+                borderRadius:0, padding:'0.35rem 0.625rem',
+                fontSize:'9px', fontFamily: 'monospace', textTransform: 'uppercase', color:THEME.colors.textSecondary, whiteSpace: 'nowrap',
               }}>
-                <span style={{ fontWeight:500, color:'var(--text-muted)' }}>Role:</span>
+                <span style={{ fontWeight:700, color:THEME.colors.textMuted }}>Role:</span>
                 <select
                   value={activeRole}
                   onChange={e => handleRoleChange(e.target.value)}
-                  style={{ background:'transparent', border:'none', outline:'none', fontSize:'0.8125rem', fontWeight:600, color:'var(--brand)', cursor:'pointer' }}
+                  style={{ background:'transparent', border:'none', outline:'none', fontSize:'9px', fontWeight:900, color:'#000', cursor:'pointer' }}
                 >
                   {Object.entries(ROLE_META).map(([val, meta]) => (
                     <option key={val} value={val}>{meta.label}</option>
@@ -328,15 +354,132 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             )}
 
-            <button style={{ width:40, height:40, borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--text-secondary)', position:'relative', boxShadow: 'var(--shadow-sm)' }}>
-              <Icon d={ICONS.bell} size={18} />
-              <span style={{ position:'absolute', top:8, right:8, width:8, height:8, borderRadius:'50%', background:'var(--danger)', border:'2px solid var(--surface)' }} />
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setNotificationsOpen(p => !p)}
+                style={{ width:32, height:32, borderRadius:0, background:'#ffffff', border:'1px solid #000', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#000', position:'relative', flexShrink: 0, zIndex: 10 }}
+              >
+                <Icon d={ICONS.bell} size={16} />
+                {notifications.some(n => !n.read) && (
+                  <span style={{ position:'absolute', top:6, right:6, width:5, height:5, background:'#000', border:'1px solid #fff', pointerEvents:'none' }} />
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '0.5rem',
+                  width: '320px',
+                  background: '#ffffff',
+                  border: '2px solid #000',
+                  boxShadow: '4px 4px 0px 0px #000',
+                  zIndex: 100,
+                  fontFamily: 'monospace',
+                  textTransform: 'uppercase'
+                }}>
+                  {/* Dropdown Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', borderBottom: '1px solid #000' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 900, color: '#000' }}>Notifications</span>
+                    <button
+                      onClick={markAllAsRead}
+                      style={{ fontSize: '9px', fontWeight: 700, color: '#000', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+
+                  {/* Dropdown Tabs */}
+                  <div style={{ display: 'flex', borderBottom: '1px solid #000', background: '#f4f4f5' }}>
+                    {(['all', 'unread', 'read'] as const).map(tab => {
+                      const count = tab === 'all' 
+                        ? notifications.length 
+                        : tab === 'unread' 
+                          ? notifications.filter(n => !n.read).length 
+                          : notifications.filter(n => n.read).length;
+                      const active = activeTab === tab;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveTab(tab)}
+                          style={{
+                            flex: 1,
+                            padding: '0.5rem 0',
+                            fontSize: '9px',
+                            fontWeight: active ? 900 : 600,
+                            color: active ? '#fff' : '#000',
+                            background: active ? '#000' : 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            borderRight: tab !== 'read' ? '1px solid #000' : 'none'
+                          }}
+                        >
+                          {tab} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Dropdown List */}
+                  <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    {filteredNotifications.length === 0 ? (
+                      <div style={{ padding: '2rem 1rem', textAlign: 'center', fontSize: '10px', color: '#71717a' }}>
+                        No notifications found
+                      </div>
+                    ) : (
+                      filteredNotifications.map(n => (
+                        <div
+                          key={n.id}
+                          style={{
+                            padding: '0.75rem',
+                            borderBottom: '1px solid #e4e4e7',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem',
+                            background: n.read ? '#fff' : '#fafafa'
+                          }}
+                        >
+                          <div style={{
+                            fontSize: '10px',
+                            fontWeight: n.read ? 500 : 800,
+                            color: '#000',
+                            lineHeight: 1.3
+                          }}>
+                            {n.text}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
+                            <span style={{ fontSize: '8px', color: '#71717a' }}>{n.time}</span>
+                            <button
+                              onClick={() => toggleRead(n.id)}
+                              style={{
+                                fontSize: '8px',
+                                fontWeight: 700,
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#000',
+                                textDecoration: 'underline',
+                                cursor: 'pointer',
+                                padding: 0
+                              }}
+                            >
+                              {n.read ? 'Mark Unread' : 'Mark Read'}
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             
-            <Link href="/dashboard/borrowers/new" className="btn btn-secondary" style={{ padding:'0.55rem 1rem', borderRadius: 10, fontWeight: 600 }}>
+            <Link href="/dashboard/borrowers/new" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'0.25rem', border:'1px solid #000', background:'#fff', color:'#000', padding:'0.4rem 0.75rem', fontSize:'10px', fontWeight:700, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'0.03em', whiteSpace:'nowrap', flexShrink:0, textDecoration:'none', cursor:'pointer', transition:'background 0.15s' }}>
               + Borrower
             </Link>
-            <Link href="/dashboard/loans/new" className="btn btn-primary" style={{ padding:'0.55rem 1.25rem', borderRadius: 10, fontWeight: 600 }}>
+            <Link href="/dashboard/loans/new" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'0.25rem', border:'1px solid #000', background:'#000', color:'#ffffff', padding:'0.4rem 0.875rem', fontSize:'10px', fontWeight:700, fontFamily:'monospace', textTransform:'uppercase', letterSpacing:'0.03em', whiteSpace:'nowrap', flexShrink:0, textDecoration:'none', cursor:'pointer', transition:'background 0.15s' }}>
               New Application
             </Link>
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { THEME } from '@/theme';
 
 type Step = {
   title: string;
@@ -225,40 +226,40 @@ export default function DocsPage() {
   };
 
   const badgeStyles: Record<string, string> = {
-    brand: 'bg-blue-50 text-blue-700 border-blue-200',
-    success: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]',
-    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    danger: 'bg-rose-500/10 text-red-600 border-rose-500/20 shadow-[0_0_8px_rgba(239,68,68,0.15)]',
-    info: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    brand: THEME.classes.badgeOutline,
+    success: THEME.classes.badgeFilled,
+    warning: THEME.classes.badgeOutline,
+    danger: THEME.classes.badgeFilled,
+    info: THEME.classes.badgeOutline,
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-500">System Blueprint</p>
-        <h2 className="text-2xl font-black tracking-tight text-white mt-1">Flows & Documentation</h2>
-        <p className="text-slate-500 text-sm mt-1">
+      <div className="border-b border-black pb-4">
+        <p className={THEME.classes.subtitle}>System Blueprint</p>
+        <h2 className={THEME.classes.title + " mt-1"}>Flows & Documentation</h2>
+        <p className="text-zinc-500 text-xs mt-1">
           Review core backend workflows, database entities, API endpoints, and download the full technical design document.
         </p>
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left/Middle Column (Flow Viewer) */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
           
           {/* Tab buttons */}
-          <div className="card rounded-2xl p-1.5 flex flex-wrap gap-1.5">
+          <div className={`${THEME.classes.card} flex flex-wrap gap-2`}>
             {Object.entries(FLOWS).map(([key, value]) => (
               <button
                 key={key}
                 onClick={() => { setActiveTab(key); setCopied(false); }}
-                className={`flex-1 min-w-[130px] rounded-xl py-2 px-3 text-xs font-bold transition-all duration-200 ${
+                className={`flex-1 min-w-[130px] py-2 px-3 text-xs font-mono uppercase font-bold tracking-wider border ${
                   activeTab === key
-                    ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/10'
-                    : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.03]'
+                    ? 'bg-black text-white border-black'
+                    : 'bg-white text-black border-black hover:bg-zinc-50'
                 }`}
               >
                 {value.title.split(' & ')[0]}
@@ -267,36 +268,36 @@ export default function DocsPage() {
           </div>
 
           {/* Stepper Card */}
-          <div className="card rounded-[28px] p-6 space-y-6">
-            <div className="flex items-center justify-between">
+          <div className={THEME.classes.card + " space-y-6"}>
+            <div className="flex items-center justify-between border-b border-black pb-3">
               <div>
-                <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${badgeStyles[currentFlow.badgeType]}`}>
+                <span className={badgeStyles[currentFlow.badgeType]}>
                   {currentFlow.badge}
                 </span>
-                <h3 className="text-lg font-bold text-white mt-1.5">{currentFlow.title}</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-black mt-2">{currentFlow.title}</h3>
               </div>
             </div>
 
-            <p className="text-slate-500 text-xs leading-relaxed">{currentFlow.overview}</p>
+            <p className="text-zinc-500 text-xs leading-relaxed">{currentFlow.overview}</p>
 
             {/* Stepper list */}
             <div className="space-y-4 pt-2">
               {currentFlow.steps.map((step, idx) => (
-                <div key={idx} className="flex gap-4 group">
+                <div key={idx} className="flex gap-4">
                   <div className="flex flex-col items-center flex-shrink-0">
-                    <div className="w-8 h-8 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xs font-bold text-white group-hover:border-indigo-500/50 group-hover:text-indigo-400 transition-colors duration-250">
+                    <div className="w-8 h-8 border border-black bg-black text-white flex items-center justify-center text-xs font-bold font-mono">
                       {idx + 1}
                     </div>
                     {idx < currentFlow.steps.length - 1 && (
-                      <div className="w-0.5 flex-1 bg-white/5 my-1.5" />
+                      <div className="w-0.5 flex-1 bg-black my-1.5" />
                     )}
                   </div>
-                  <div className="bg-white/[0.01] hover:bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex-1 transition-all duration-200">
-                    <div className="flex justify-between items-start gap-3">
-                      <h4 className="text-xs font-bold text-white">{step.title}</h4>
-                      <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">{step.actor}</span>
+                  <div className="border border-black bg-white p-4 flex-1">
+                    <div className="flex justify-between items-start gap-3 border-b border-zinc-100 pb-2 mb-2 font-mono uppercase text-[10px]">
+                      <h4 className="font-bold text-black">{step.title}</h4>
+                      <span className="font-bold text-zinc-400">{step.actor}</span>
                     </div>
-                    <p className="text-slate-500 text-[11px] mt-1.5 leading-relaxed">{step.description}</p>
+                    <p className="text-zinc-500 text-[11px] leading-relaxed">{step.description}</p>
                   </div>
                 </div>
               ))}
@@ -304,78 +305,58 @@ export default function DocsPage() {
           </div>
 
           {/* Mermaid / Syntax block */}
-          <div className="card rounded-[28px] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-white tracking-wide">Mermaid Diagram Source Code</h4>
+          <div className={THEME.classes.card + " space-y-4"}>
+            <div className="flex items-center justify-between border-b border-black pb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-black">Mermaid Diagram Source Code</h4>
               <button
                 onClick={handleCopyMermaid}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1 text-[10px] font-bold text-slate-300 hover:text-white transition-all duration-200"
+                className="border border-black bg-white hover:bg-zinc-50 px-2.5 py-1 text-[9px] font-mono font-bold uppercase tracking-widest text-black"
               >
-                {copied ? (
-                  <>
-                    <svg className="h-3 w-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
-                    </svg>
-                    Copy Source
-                  </>
-                )}
+                {copied ? 'Copied!' : 'Copy Source'}
               </button>
             </div>
-            <div className="bg-slate-950/80 border border-white/5 rounded-2xl p-4 font-mono text-[10px] text-slate-500 overflow-x-auto max-h-[300px] custom-scrollbar leading-relaxed">
+            <div className="bg-zinc-50 border border-black p-4 font-mono text-[9px] text-black overflow-x-auto max-h-[300px] leading-relaxed">
               <pre>{currentFlow.mermaid}</pre>
             </div>
           </div>
         </div>
 
         {/* Right Column (Design Doc Download & References) */}
-        <div className="space-y-6">
+        <div className="lg:col-span-4 space-y-6">
           
           {/* Document Download Card */}
-          <div className="card rounded-[28px] p-6 relative overflow-hidden group">
-            {/* Ambient background glow */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all duration-300" />
-            <div className="absolute -top-3 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-500 to-cyan-500" />
-
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 flex-shrink-0">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
+          <div className={THEME.classes.card + " space-y-4"}>
+            <div className="flex gap-4 border-b border-black pb-3">
+              <div className="w-10 h-10 border border-black bg-black text-white flex items-center justify-center font-bold text-xs">
+                DOC
               </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-white">Technical Design Document</h3>
-                <p className="text-slate-500 text-[10px]">Microsoft Word format (.docx)</p>
+              <div className="space-y-1 font-mono uppercase">
+                <h3 className="text-xs font-bold text-black">Technical Design Document</h3>
+                <p className="text-zinc-400 text-[9px]">Microsoft Word (.docx)</p>
               </div>
             </div>
 
-            <p className="text-slate-500 text-xs mt-4 leading-relaxed">
-              Contains the complete architectural specification, 5 sequence flowcharts, and 7 high-fidelity wireframe mockups generated programmatically using Matplotlib.
+            <p className="text-zinc-500 text-xs leading-relaxed">
+              Contains the complete architectural specification, sequence flowcharts, and high-fidelity wireframe mockups.
             </p>
 
-            <div className="mt-5 border-t border-white/5 pt-4 flex items-center justify-between text-[10px] text-slate-500">
+            <div className="border-t border-black/10 pt-3 flex items-center justify-between text-[9px] font-mono uppercase text-zinc-500">
               <span>Size: ~1,001 KB</span>
-              <span>Renders: 12 Figures</span>
+              <span>Figures: 12 Renders</span>
             </div>
 
             <a
               href="http://localhost:8000/download-design-docx"
               download
-              className="mt-5 block w-full rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 py-3 text-xs font-bold text-white text-center shadow-lg hover:shadow-indigo-500/10 transition-all duration-200"
+              className={THEME.classes.btnPrimary + " w-full text-center block"}
             >
               Download Design DOCX
             </a>
           </div>
 
           {/* Database Entities Card */}
-          <div className="card rounded-[28px] p-6 space-y-4">
-            <h3 className="text-xs font-black text-white uppercase tracking-wider">Core Database Schema</h3>
+          <div className={THEME.classes.card + " space-y-4"}>
+            <h3 className={THEME.classes.sectionTitle + " border-b border-black pb-2"}>Core Database Schema</h3>
             
             <div className="space-y-3.5">
               {[
@@ -386,17 +367,17 @@ export default function DocsPage() {
                 { name: 'Transaction', desc: 'Financial transaction ledger logging disbursements, payments, platform fees, and penalties.' },
                 { name: 'LendingGroup', desc: 'Self-help/Sacco entities enforcing joint liability. Restricts loans to groups with >= 3 active members.' }
               ].map((entity, i) => (
-                <div key={i} className="border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
-                  <span className="text-xs font-bold text-indigo-400">{entity.name}</span>
-                  <p className="text-slate-500 text-[10px] mt-1 leading-relaxed">{entity.desc}</p>
+                <div key={i} className="border-b border-zinc-100 pb-3 last:border-b-0 last:pb-0 font-mono">
+                  <span className="text-xs font-bold text-black uppercase">{entity.name}</span>
+                  <p className="text-zinc-500 text-[10px] mt-1 leading-relaxed">{entity.desc}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* API endpoints checklist */}
-          <div className="card rounded-[28px] p-6 space-y-4">
-            <h3 className="text-xs font-black text-white uppercase tracking-wider">Extended API Reference</h3>
+          <div className={THEME.classes.card + " space-y-4"}>
+            <h3 className={THEME.classes.sectionTitle + " border-b border-black pb-2"}>Extended API Reference</h3>
             
             <div className="space-y-3">
               {[
@@ -407,15 +388,13 @@ export default function DocsPage() {
                 { method: 'POST', path: '/groups/apply', desc: 'Submit lending group loan application.' },
                 { method: 'POST', path: '/webhooks/mpesa/confirmation', desc: 'M-Pesa validation & auto-allocation.' }
               ].map((endpoint, i) => (
-                <div key={i} className="flex gap-3 text-[10px] items-start border-b border-white/5 pb-2.5 last:border-b-0 last:pb-0">
-                  <span className={`px-2 py-0.5 rounded font-black text-[8px] ${
-                    endpoint.method === 'POST' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                  }`}>
+                <div key={i} className="flex gap-3 text-[10px] items-start border-b border-zinc-100 pb-2.5 last:border-b-0 last:pb-0 font-mono uppercase">
+                  <span className="border border-black bg-black text-white px-1.5 py-0.5 text-[8px] font-bold">
                     {endpoint.method}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className="font-mono text-white text-[10px] block truncate">{endpoint.path}</span>
-                    <span className="text-slate-500 text-[9px] block mt-0.5">{endpoint.desc}</span>
+                    <span className="font-bold text-black text-[9px] block truncate">{endpoint.path}</span>
+                    <span className="text-zinc-400 text-[8px] block mt-0.5">{endpoint.desc}</span>
                   </div>
                 </div>
               ))}

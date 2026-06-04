@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchApi } from '@/lib/api';
+import { THEME } from '@/theme';
 
 type Borrower = {
   id: number;
@@ -15,9 +16,10 @@ export default function CreateLoanPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [borrowers, setBorrowers] = useState<Borrower[]>([]);
+  const [expandedPanel, setExpandedPanel] = useState<'form' | 'preview' | null>(null);
   
   const [formData, setFormData] = useState({
-    borrower_id: 1, // Defaulting to 1 for dummy purposes
+    borrower_id: 1,
     principal_amount: 10000,
     interest_rate: 15.0,
     term_months: 6,
@@ -82,33 +84,71 @@ export default function CreateLoanPage() {
     }
   };
 
+  const principalPct = schedule.totalPayable > 0 ? ((formData.principal_amount || 0) / schedule.totalPayable) * 100 : 0;
+  const interestPct = schedule.totalPayable > 0 ? (schedule.totalInterest / schedule.totalPayable) * 100 : 0;
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+    <div className="grid gap-6 grid-cols-1 lg:grid-cols-12 items-start">
       {/* Left: Form */}
-      <div className="card rounded-[28px] p-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500">Loans</p>
-        <h2 className="mt-2 text-xl font-bold tracking-tight text-white">Create new application</h2>
+      <div className={`${THEME.classes.card} ${expandedPanel === 'form' ? 'lg:col-span-12' : 'lg:col-span-7'} ${expandedPanel === 'preview' ? 'hidden' : 'block'}`}>
+        <div className="flex items-center gap-4 mb-6 border-b border-black pb-4">
+          <div className="flex h-12 w-12 items-center justify-center border border-black bg-black text-white font-black text-lg">
+            $
+          </div>
+          <div className="flex-1 flex items-center justify-between">
+            <div>
+              <p className={THEME.classes.subtitle}>Loans</p>
+              <h2 className={THEME.classes.title}>Create new application</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setExpandedPanel(expandedPanel === 'form' ? null : 'form')}
+              title={expandedPanel === 'form' ? "Collapse Form" : "Expand Form"}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '6px',
+                border: '1px solid #000',
+                background: '#fff',
+                color: '#000',
+                cursor: 'pointer',
+                borderRadius: '2px'
+              }}
+            >
+              {expandedPanel === 'form' ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H3v5M16 21h5v-5M21 3l-7 7M3 21l7-7" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
         
         {error && (
-          <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300 flex items-center gap-2">
-            <span className="text-red-600">⚠️</span>
+          <div className="mb-5 border border-black bg-black text-white px-4 py-3 text-xs font-mono uppercase tracking-wider flex items-center gap-2">
+            <span>⚠️</span>
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Borrower</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Borrower</label>
               {borrowers.length === 0 ? (
-                <div className="w-full rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-slate-500">
-                  No borrowers found.
+                <div className="border border-black bg-white p-3 text-xs font-mono text-zinc-400 uppercase tracking-widest">
+                  No borrowers found
                 </div>
               ) : (
                 <select
                   value={formData.borrower_id}
                   onChange={(e) => setFormData({ ...formData, borrower_id: parseInt(e.target.value) })}
-                  className="premium-select w-full rounded-xl px-4 py-3 text-sm outline-none"
+                  className={THEME.classes.input}
                   required
                 >
                   {borrowers.map((b) => (
@@ -120,11 +160,11 @@ export default function CreateLoanPage() {
               )}
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Loan Type</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Loan Type</label>
               <select
                 value={formData.loan_type}
                 onChange={(e) => setFormData({ ...formData, loan_type: e.target.value })}
-                className="premium-select w-full rounded-xl px-4 py-3 text-sm outline-none"
+                className={THEME.classes.input}
                 required
               >
                 <option value="SALARY">Salary Loan</option>
@@ -137,22 +177,22 @@ export default function CreateLoanPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Principal Amount (KES)</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Principal Amount (KES)</label>
               <input
                 type="number"
                 value={formData.principal_amount}
-                onChange={(e) => setFormData({ ...formData, principal_amount: parseFloat(e.target.value) })}
-                className="premium-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+                onChange={(e) => setFormData({ ...formData, principal_amount: parseFloat(e.target.value) || 0 })}
+                className={THEME.classes.input}
                 required
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Term (Months)</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Term (Months)</label>
               <input
                 type="number"
                 value={formData.term_months}
-                onChange={(e) => setFormData({ ...formData, term_months: parseInt(e.target.value) })}
-                className="premium-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+                onChange={(e) => setFormData({ ...formData, term_months: parseInt(e.target.value) || 1 })}
+                className={THEME.classes.input}
                 required
               />
             </div>
@@ -160,22 +200,22 @@ export default function CreateLoanPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Interest Rate (%)</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Interest Rate (%)</label>
               <input
                 type="number"
                 value={formData.interest_rate}
                 step="0.01"
-                onChange={(e) => setFormData({ ...formData, interest_rate: parseFloat(e.target.value) })}
-                className="premium-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+                onChange={(e) => setFormData({ ...formData, interest_rate: parseFloat(e.target.value) || 0 })}
+                className={THEME.classes.input}
                 required
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">Disbursement Method</label>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-zinc-500">Disbursement Method</label>
               <select
                 value={formData.disbursement_method}
                 onChange={(e) => setFormData({ ...formData, disbursement_method: e.target.value })}
-                className="premium-select w-full rounded-xl px-4 py-3 text-sm outline-none"
+                className={THEME.classes.input}
                 required
               >
                 <option value="LUMP_SUM">Lump Sum (Full Disbursement)</option>
@@ -185,18 +225,18 @@ export default function CreateLoanPage() {
             </div>
           </div>
 
-          <div className="pt-4 flex items-center justify-end gap-3">
+          <div className="pt-4 flex items-center justify-end gap-3 border-t border-black/10">
             <button
               type="button"
               onClick={() => router.back()}
-              className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-5 py-2.5 text-xs font-semibold text-slate-300 transition-all duration-200"
+              className={THEME.classes.btnSecondary}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`rounded-xl bg-gradient-to-r from-amber-500 to-desert-500 hover:from-amber-600 hover:to-desert-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:shadow-amber-500/10 transition-all duration-200 ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+              className={THEME.classes.btnPrimary}
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -212,83 +252,105 @@ export default function CreateLoanPage() {
       </div>
 
       {/* Right: Amortization Schedule Preview */}
-      <div className="card rounded-[28px] p-6 self-start sticky top-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500">Preview</p>
-        <h3 className="mt-2 text-lg font-bold tracking-tight text-white">Amortization Schedule</h3>
+      <div className={`${THEME.classes.card} ${expandedPanel === 'preview' ? 'lg:col-span-12' : 'lg:col-span-5'} ${expandedPanel === 'form' ? 'hidden' : 'block'} self-start sticky top-6 max-h-[calc(100vh-140px)] overflow-y-auto`}>
+        <div className="flex items-center justify-between border-b border-black pb-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-black" />
+            <h3 className={THEME.classes.sectionTitle}>Amortization Schedule Preview</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpandedPanel(expandedPanel === 'preview' ? null : 'preview')}
+            title={expandedPanel === 'preview' ? "Collapse Preview" : "Expand Preview"}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px',
+              border: '1px solid #000',
+              background: '#fff',
+              color: '#000',
+              cursor: 'pointer',
+              borderRadius: '2px'
+            }}
+          >
+            {expandedPanel === 'preview' ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H3v5M16 21h5v-5M21 3l-7 7M3 21l7-7" />
+              </svg>
+            )}
+          </button>
+        </div>
 
         {/* Summary Cards */}
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Monthly</p>
-            <p className="mt-1 text-lg font-bold text-amber-400">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="border border-black p-3 bg-zinc-50">
+            <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Monthly Installment</div>
+            <div className="text-sm font-bold font-mono text-black mt-1">
               KES {Math.round(schedule.monthlyInstallment).toLocaleString()}
-            </p>
+            </div>
           </div>
-          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total Interest</p>
-            <p className="mt-1 text-lg font-bold text-red-600">
+          <div className="border border-black p-3 bg-zinc-50">
+            <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Total Interest</div>
+            <div className="text-sm font-bold font-mono text-black mt-1">
               KES {Math.round(schedule.totalInterest).toLocaleString()}
-            </p>
+            </div>
           </div>
         </div>
 
         {/* Total Payable */}
-        <div className="mt-3 rounded-xl border border-amber-500/15 bg-amber-500/5 p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-slate-500">Total Payable</p>
-            <p className="text-lg font-bold text-white">
-              KES {Math.round(schedule.totalPayable).toLocaleString()}
-            </p>
+        <div className="border border-black p-4 mb-4">
+          <div className="flex items-center justify-between font-mono text-xs uppercase font-bold mb-3">
+            <span>Total Payable</span>
+            <span>KES {Math.round(schedule.totalPayable).toLocaleString()}</span>
           </div>
           {/* Visual breakdown bar */}
-          <div className="mt-2 flex h-2 w-full overflow-hidden rounded-full">
-            <div
-              className="bg-amber-400 transition-all duration-500"
-              style={{ width: `${schedule.totalPayable > 0 ? ((formData.principal_amount || 0) / schedule.totalPayable) * 100 : 0}%` }}
-            ></div>
-            <div
-              className="bg-rose-400 transition-all duration-500"
-              style={{ width: `${schedule.totalPayable > 0 ? (schedule.totalInterest / schedule.totalPayable) * 100 : 0}%` }}
-            ></div>
+          <div className="flex h-3 w-full border border-black bg-zinc-100 overflow-hidden">
+            <div className="h-full bg-black" style={{ width: `${principalPct}%` }} />
+            <div className="h-full bg-zinc-400" style={{ width: `${interestPct}%` }} />
           </div>
-          <div className="mt-1.5 flex items-center justify-between text-[10px]">
-            <span className="flex items-center gap-1 text-amber-400">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400"></span>
-              Principal
+          <div className="flex items-center justify-between mt-2.5 font-mono text-[9px] uppercase tracking-wider">
+            <span className="flex items-center gap-1.5 font-bold text-black">
+              <span className="w-2.5 h-2.5 bg-black display-inline-block" />
+              Principal ({Math.round(principalPct)}%)
             </span>
-            <span className="flex items-center gap-1 text-red-600">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-400"></span>
-              Interest
+            <span className="flex items-center gap-1.5 font-bold text-zinc-500">
+              <span className="w-2.5 h-2.5 bg-zinc-400 display-inline-block" />
+              Interest ({Math.round(interestPct)}%)
             </span>
           </div>
         </div>
 
         {/* Schedule Table */}
-        <div className="mt-5 max-h-64 overflow-auto rounded-xl border border-white/5 bg-white/[0.02]">
-          <table className="min-w-full text-left text-xs">
-            <thead className="text-[9px] uppercase tracking-[0.15em] text-slate-500 border-b border-white/5 sticky top-0 bg-[#0a0d18]">
+        <div className="border border-black overflow-hidden">
+          <table className="min-w-full text-left text-xs font-mono">
+            <thead className="bg-black text-white uppercase tracking-wider text-[9px] border-b border-black">
               <tr>
-                <th className="px-3 py-2 font-medium">#</th>
-                <th className="px-3 py-2 font-medium">Principal</th>
-                <th className="px-3 py-2 font-medium">Interest</th>
-                <th className="px-3 py-2 font-medium">Balance</th>
+                <th className="px-3 py-2 font-bold">Month</th>
+                <th className="px-3 py-2 font-bold text-right">Principal</th>
+                <th className="px-3 py-2 font-bold text-right">Interest</th>
+                <th className="px-3 py-2 font-bold text-right">Balance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-black">
               {schedule.rows.map((row) => (
-                <tr key={row.month} className="hover:bg-white/[0.03] transition-colors">
-                  <td className="px-3 py-2 text-slate-500 font-mono">{row.month}</td>
-                  <td className="px-3 py-2 text-slate-300">{Math.round(row.principal).toLocaleString()}</td>
-                  <td className="px-3 py-2 text-red-600/70">{Math.round(row.interest).toLocaleString()}</td>
-                  <td className="px-3 py-2 text-white font-medium">{Math.max(0, Math.round(row.balance)).toLocaleString()}</td>
+                <tr key={row.month} className="hover:bg-zinc-50 transition-colors">
+                  <td className="px-3 py-2 text-zinc-500 font-bold">{row.month}</td>
+                  <td className="px-3 py-2 text-right">{Math.round(row.principal).toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right text-zinc-500">{Math.round(row.interest).toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right font-bold text-black">{Math.max(0, Math.round(row.balance)).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        <p className="mt-3 text-[10px] text-slate-600 leading-relaxed">
-          Flat-rate calculation. Actual schedule may vary based on disbursement timing and penalties.
+        <p className="mt-4 text-[9px] font-mono text-zinc-400 uppercase tracking-widest leading-relaxed">
+          Flat-rate calculation. Actual schedule may vary based on disbursement timing and late penalties.
         </p>
       </div>
     </div>
