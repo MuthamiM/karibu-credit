@@ -1,0 +1,14 @@
+{
+  "report_type": "daily_summary",
+  "generated_at": "2026-07-20T14:18:53.028030",
+  "date": "2026-07-20",
+  "metrics": {
+    "total_loans": 1509,
+    "active_loans": 677,
+    "overdue_loans": 0,
+    "total_borrowers": 1000,
+    "total_disbursed": 623058200.0,
+    "total_outstanding": 459867153.23,
+    "portfolio_at_risk": 0.0
+  }
+}

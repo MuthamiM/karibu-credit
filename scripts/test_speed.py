@@ -2,7 +2,7 @@ import asyncio
 import time
 import httpx
 
-async def test():
+async def run_speed_test():
     # Login to get token
     async with httpx.AsyncClient() as client:
         # Get token
@@ -21,4 +21,4 @@ async def test():
         print(f"Loaded {len(loans)} loans in {end - start:.4f} seconds!")
 
 if __name__ == "__main__":
-    asyncio.run(test())
+    asyncio.run(run_speed_test())

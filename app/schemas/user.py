@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from app.models.user import UserRole
 
 # Shared properties
@@ -12,14 +12,14 @@ class UserBase(BaseModel):
 
 # Properties to receive via API on creation
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(..., min_length=6)
 
 # Properties to receive via API on update
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     phone_number: Optional[str] = None
-    password: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=6)
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
 
@@ -28,3 +28,11 @@ class UserResponse(UserBase):
     id: int
     
     model_config = ConfigDict(from_attributes=True)
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6)
+
+class PhoneUpdateRequest(BaseModel):
+    phone_number: str
+

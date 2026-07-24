@@ -174,7 +174,7 @@ async def init_db():
         super_admin = User(
             email="admin@karibucredit.co.ke",
             full_name="Chief Administrator",
-            hashed_password=get_password_hash("SuperSecret123!"),
+            hashed_password=get_password_hash(settings.DEFAULT_ADMIN_PASSWORD),
             role=UserRole.SUPER_ADMIN,
             is_active=True
         )
@@ -182,7 +182,7 @@ async def init_db():
         loan_officer = User(
             email="officer@karibucredit.co.ke",
             full_name="Officer Jane Mwangi",
-            hashed_password=get_password_hash("SuperSecret123!"),
+            hashed_password=get_password_hash(settings.DEFAULT_ADMIN_PASSWORD),
             role=UserRole.LOAN_OFFICER,
             is_active=True
         )
@@ -191,7 +191,7 @@ async def init_db():
             email="borrower@karibucredit.co.ke",
             full_name="John Doe",
             phone_number="254712345678",
-            hashed_password=get_password_hash("SuperSecret123!"),
+            hashed_password=get_password_hash(settings.DEFAULT_ADMIN_PASSWORD),
             role=UserRole.BORROWER,
             is_active=True
         )

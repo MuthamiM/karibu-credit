@@ -1,16 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { THEME } from '@/theme';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [pendingToken, setPendingToken] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [phoneHint, setPhoneHint] = useState('');
+  const [step, setStep] = useState<'credentials' | 'otp' | 'forgot_request' | 'forgot_otp' | 'forgot_new_password'>('credentials');
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setOtpCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [otpCooldown]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +39,7 @@ export default function LoginPage() {
       formData.append('password', password);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/auth/login`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/login`,
         {
           method: 'POST',
           headers: {
@@ -33,16 +49,178 @@ export default function LoginPage() {
         }
       );
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const errDetail = await response.json().catch(() => ({}));
-        throw new Error(errDetail.detail || 'Invalid credentials');
+        if (response.status === 429 && data.detail?.retry_after_seconds) {
+          setOtpCooldown(data.detail.retry_after_seconds);
+          throw new Error(`Rate limit exceeded. Please retry in ${data.detail.retry_after_seconds} seconds.`);
+        }
+        throw new Error(typeof data.detail === 'string' ? data.detail : data.detail?.error || 'Invalid credentials');
       }
 
-      const data = await response.json();
-      localStorage.setItem('token', data.access_token);
-      router.push('/dashboard');
+      if (data.otp_required && data.pending_token) {
+        setPendingToken(data.pending_token);
+        setPhoneHint(data.phone_hint || '');
+        setStep('otp');
+        setOtpCooldown(30);
+      } else if (data.access_token) {
+        localStorage.setItem('token', data.access_token);
+        router.push('/dashboard');
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/verify-otp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            pending_token: pendingToken,
+            code: otpCode.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (response.status === 429 && data.detail?.retry_after_seconds) {
+          throw new Error(`Rate limit exceeded. Please wait ${data.detail.retry_after_seconds} seconds.`);
+        }
+        throw new Error(typeof data.detail === 'string' ? data.detail : 'Invalid or expired OTP code');
+      }
+
+      if (data.access_token) {
+        localStorage.setItem('token', data.access_token);
+        router.push('/dashboard');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'OTP verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPasswordRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/forgot-password-otp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(typeof data.detail === 'string' ? data.detail : 'Failed to request reset OTP');
+      }
+
+      if (data.otp_required && data.pending_token) {
+        setPendingToken(data.pending_token);
+        setPhoneHint(data.phone_hint || '');
+        setOtpCode('');
+        setStep('forgot_otp');
+        setOtpCooldown(30);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Request failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyForgotPasswordOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/verify-otp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            pending_token: pendingToken,
+            code: otpCode.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(typeof data.detail === 'string' ? data.detail : 'OTP verification failed');
+      }
+
+      if (data.otp_confirmed && data.reset_token) {
+        setResetToken(data.reset_token);
+        setStep('forgot_new_password');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'OTP verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCompletePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/complete-password-change`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            reset_token: resetToken,
+            new_password: newPassword,
+          }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(typeof data.detail === 'string' ? data.detail : 'Password change failed');
+      }
+
+      alert('Password updated successfully! Please log in.');
+      setStep('credentials');
+      setPassword('');
+      setNewPassword('');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Password change failed');
     } finally {
       setLoading(false);
     }
@@ -138,7 +316,7 @@ export default function LoginPage() {
           }}>
             <span>[ SOC 2 COMPLIANT ]</span>
             <span>[ CBK LICENSED ]</span>
-            <span>[ ENCRYPTED ]</span>
+            <span>[ ENCRYPTED 2FA ]</span>
           </div>
         </div>
       </div>
@@ -161,10 +339,18 @@ export default function LoginPage() {
               letterSpacing: '-0.03em', marginBottom: '0.5rem',
               textTransform: 'uppercase',
             }}>
-              Console Authenticator
+              {step === 'credentials' && 'Console Authenticator'}
+              {step === 'otp' && '2FA OTP Verification'}
+              {step === 'forgot_request' && 'Reset Security Key'}
+              {step === 'forgot_otp' && 'Verify Identity (OTP)'}
+              {step === 'forgot_new_password' && 'Enter New Security Key'}
             </h2>
             <p style={{ fontSize: '0.75rem', color: THEME.colors.textMuted, fontWeight: 500 }}>
-              ENTER SYSTEM PRIVILEGES TO RE-ROUTE PORTFOLIO
+              {step === 'credentials' && 'ENTER SYSTEM PRIVILEGES TO RE-ROUTE PORTFOLIO'}
+              {step === 'otp' && `ENTER 6-DIGIT CODE SENT TO ${phoneHint}`}
+              {step === 'forgot_request' && 'ENTER REGISTERED EMAIL/PHONE TO RECEIVE OTP'}
+              {step === 'forgot_otp' && `ENTER 6-DIGIT SECURITY CODE SENT TO ${phoneHint}`}
+              {step === 'forgot_new_password' && 'SET A STRONGER SECURITY ACCESS KEY'}
             </p>
           </div>
 
@@ -182,61 +368,25 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Email Field */}
-            <div>
-              <label style={{
-                display: 'block', fontSize: '0.6875rem', fontWeight: 700,
-                color: THEME.colors.black, marginBottom: '0.5rem',
-              }}>
-                EMAIL ADDRESS
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@karibucredit.co.ke"
-                required
-                style={{
-                  width: '100%', padding: '0.75rem 1rem',
-                  background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
-                  fontSize: '0.8125rem', color: THEME.colors.black,
-                  outline: 'none', transition: 'all 0.1s ease',
-                  borderRadius: '4px',
-                  fontFamily: "'Inter', sans-serif",
-                }}
-                onFocus={e => { e.target.style.boxShadow = `0 0 0 2px ${THEME.colors.black}`; }}
-                onBlur={e => { e.target.style.boxShadow = 'none'; }}
-              />
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          {/* Credentials Step */}
+          {step === 'credentials' && (
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
                 <label style={{
-                  fontSize: '0.6875rem', fontWeight: 700, color: THEME.colors.black,
+                  display: 'block', fontSize: '0.6875rem', fontWeight: 700,
+                  color: THEME.colors.black, marginBottom: '0.5rem',
                 }}>
-                  SECURITY KEY
+                  PHONE NUMBER OR EMAIL
                 </label>
-                <button type="button" style={{
-                  background: 'none', border: 'none', fontSize: '0.625rem',
-                  color: THEME.colors.textMuted, fontWeight: 600, cursor: 'pointer',
-                  fontFamily: "'Inter', sans-serif",
-                }}>
-                  [ FORGOT KEY ]
-                </button>
-              </div>
-              <div style={{ position: 'relative' }}>
                 <input
-                  id="login-password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  id="login-email"
+                  type="text"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="+2547XXXXXXXX or name@karibucredit.co.ke"
                   required
                   style={{
-                    width: '100%', padding: '0.75rem 2.5rem 0.75rem 1rem',
+                    width: '100%', padding: '0.75rem 1rem',
                     background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
                     fontSize: '0.8125rem', color: THEME.colors.black,
                     outline: 'none', transition: 'all 0.1s ease',
@@ -246,51 +396,327 @@ export default function LoginPage() {
                   onFocus={e => { e.target.style.boxShadow = `0 0 0 2px ${THEME.colors.black}`; }}
                   onBlur={e => { e.target.style.boxShadow = 'none'; }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(p => !p)}
-                  style={{
-                    position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', color: THEME.colors.black, cursor: 'pointer',
-                    display: 'flex', padding: 0,
-                  }}
-                >
-                  {showPassword ? (
-                    <span style={{ fontSize: 10, fontWeight: 'bold' }}>HIDE</span>
-                  ) : (
-                    <span style={{ fontSize: 10, fontWeight: 'bold' }}>SHOW</span>
-                  )}
-                </button>
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <button
-              id="login-submit"
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%', padding: '0.875rem',
-                background: THEME.colors.black,
-                color: THEME.colors.white, border: `1px solid ${THEME.colors.black}`,
-                fontSize: '0.75rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer',
-                transition: 'all 0.15s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                letterSpacing: '0.05em',
-                marginTop: '0.5rem',
-                borderRadius: '4px',
-                fontFamily: "'Inter', sans-serif",
-              }}
-              onMouseEnter={e => { if (!loading) { (e.target as HTMLElement).style.background = THEME.colors.grayDark; } }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.background = THEME.colors.black; }}
-            >
-              {loading ? (
-                <span>[ AUTHENTICATING... ]</span>
-              ) : (
-                <span>SIGN IN →</span>
-              )}
-            </button>
-          </form>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{
+                    fontSize: '0.6875rem', fontWeight: 700, color: THEME.colors.black,
+                  }}>
+                    SECURITY KEY
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setStep('forgot_request'); setError(''); }}
+                    style={{
+                      background: 'none', border: 'none', fontSize: '0.625rem',
+                      color: THEME.colors.textMuted, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                  >
+                    [ FORGOT KEY ]
+                  </button>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min. 6 characters"
+                    required
+                    style={{
+                      width: '100%', padding: '0.75rem 2.5rem 0.75rem 1rem',
+                      background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
+                      fontSize: '0.8125rem', color: THEME.colors.black,
+                      outline: 'none', transition: 'all 0.1s ease',
+                      borderRadius: '4px',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                    onFocus={e => { e.target.style.boxShadow = `0 0 0 2px ${THEME.colors.black}`; }}
+                    onBlur={e => { e.target.style.boxShadow = 'none'; }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    style={{
+                      position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', color: THEME.colors.black, cursor: 'pointer',
+                      display: 'flex', padding: 0,
+                    }}
+                  >
+                    {showPassword ? (
+                      <span style={{ fontSize: 10, fontWeight: 'bold' }}>HIDE</span>
+                    ) : (
+                      <span style={{ fontSize: 10, fontWeight: 'bold' }}>SHOW</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                id="login-submit"
+                type="submit"
+                disabled={loading || otpCooldown > 0}
+                style={{
+                  width: '100%', padding: '0.875rem',
+                  background: THEME.colors.black,
+                  color: THEME.colors.white, border: `1px solid ${THEME.colors.black}`,
+                  fontSize: '0.75rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  letterSpacing: '0.05em',
+                  marginTop: '0.5rem',
+                  borderRadius: '4px',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+                onMouseEnter={e => { if (!loading) { (e.target as HTMLElement).style.background = THEME.colors.grayDark; } }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.background = THEME.colors.black; }}
+              >
+                {loading ? (
+                  <span>[ SENDING OTP VIA GATEWAY... ]</span>
+                ) : otpCooldown > 0 ? (
+                  <span>RESEND AVAILABLE IN {otpCooldown}s</span>
+                ) : (
+                  <span>REQUEST OTP →</span>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Login OTP Step */}
+          {step === 'otp' && (
+            <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label style={{
+                  display: 'block', fontSize: '0.6875rem', fontWeight: 700,
+                  color: THEME.colors.black, marginBottom: '0.5rem',
+                }}>
+                  OTP CODE
+                </label>
+                <input
+                  id="otp-code"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  minLength={6}
+                  value={otpCode}
+                  onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); if (v.length <= 6) setOtpCode(v); }}
+                  placeholder="000000"
+                  required
+                  autoFocus
+                  style={{
+                    width: '100%', padding: '0.75rem 1rem',
+                    background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
+                    fontSize: '1rem', color: THEME.colors.black, letterSpacing: '0.2em',
+                    textAlign: 'center', outline: 'none', transition: 'all 0.1s ease',
+                    borderRadius: '4px',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                  onFocus={e => { e.target.style.boxShadow = `0 0 0 2px ${THEME.colors.black}`; }}
+                  onBlur={e => { e.target.style.boxShadow = 'none'; }}
+                />
+              </div>
+
+              <button
+                id="otp-submit"
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%', padding: '0.875rem',
+                  background: THEME.colors.black,
+                  color: THEME.colors.white, border: `1px solid ${THEME.colors.black}`,
+                  fontSize: '0.75rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                  letterSpacing: '0.05em',
+                  marginTop: '0.5rem',
+                  borderRadius: '4px',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+                onMouseEnter={e => { if (!loading) { (e.target as HTMLElement).style.background = THEME.colors.grayDark; } }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.background = THEME.colors.black; }}
+              >
+                {loading ? (
+                  <span>[ VERIFYING... ]</span>
+                ) : (
+                  <span>VERIFY & LOG IN →</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setStep('credentials'); setError(''); }}
+                style={{
+                  background: 'none', border: 'none', fontSize: '0.6875rem',
+                  color: THEME.colors.textMuted, fontWeight: 600, cursor: 'pointer',
+                  textAlign: 'center', marginTop: '0.5rem',
+                }}
+              >
+                ← Back to Login Credentials
+              </button>
+            </form>
+          )}
+
+          {/* Forgot Password: Request OTP Step */}
+          {step === 'forgot_request' && (
+            <form onSubmit={handleForgotPasswordRequest} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label style={{
+                  display: 'block', fontSize: '0.6875rem', fontWeight: 700,
+                  color: THEME.colors.black, marginBottom: '0.5rem',
+                }}>
+                  PHONE NUMBER OR EMAIL
+                </label>
+                <input
+                  type="text"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="+2547XXXXXXXX or name@karibucredit.co.ke"
+                  required
+                  style={{
+                    width: '100%', padding: '0.75rem 1rem',
+                    background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
+                    fontSize: '0.8125rem', color: THEME.colors.black,
+                    outline: 'none', borderRadius: '4px',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || otpCooldown > 0}
+                style={{
+                  width: '100%', padding: '0.875rem',
+                  background: THEME.colors.black,
+                  color: THEME.colors.white, border: `1px solid ${THEME.colors.black}`,
+                  fontSize: '0.75rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer',
+                  borderRadius: '4px',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                {loading ? '[ SENDING RESET OTP... ]' : otpCooldown > 0 ? `RESEND AVAILABLE IN ${otpCooldown}s` : 'SEND RESET OTP →'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setStep('credentials'); setError(''); }}
+                style={{
+                  background: 'none', border: 'none', fontSize: '0.6875rem',
+                  color: THEME.colors.textMuted, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                ← Back to Sign In
+              </button>
+            </form>
+          )}
+
+          {/* Forgot Password: Verify OTP Step */}
+          {step === 'forgot_otp' && (
+            <form onSubmit={handleVerifyForgotPasswordOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label style={{
+                  display: 'block', fontSize: '0.6875rem', fontWeight: 700,
+                  color: THEME.colors.black, marginBottom: '0.5rem',
+                }}>
+                  RESET CODE
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  minLength={6}
+                  value={otpCode}
+                  onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); if (v.length <= 6) setOtpCode(v); }}
+                  placeholder="000000"
+                  required
+                  autoFocus
+                  style={{
+                    width: '100%', padding: '0.75rem 1rem',
+                    background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
+                    fontSize: '1rem', color: THEME.colors.black, letterSpacing: '0.2em',
+                    textAlign: 'center', outline: 'none', borderRadius: '4px',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%', padding: '0.875rem',
+                  background: THEME.colors.black,
+                  color: THEME.colors.white, border: `1px solid ${THEME.colors.black}`,
+                  fontSize: '0.75rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer',
+                  borderRadius: '4px',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                {loading ? '[ VERIFYING... ]' : 'VERIFY RESET CODE →'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setStep('forgot_request'); setError(''); }}
+                style={{
+                  background: 'none', border: 'none', fontSize: '0.6875rem',
+                  color: THEME.colors.textMuted, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                ← Back to Request Reset
+              </button>
+            </form>
+          )}
+
+          {/* Forgot Password: Enter New Password Step */}
+          {step === 'forgot_new_password' && (
+            <form onSubmit={handleCompletePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label style={{
+                  display: 'block', fontSize: '0.6875rem', fontWeight: 700,
+                  color: THEME.colors.black, marginBottom: '0.5rem',
+                }}>
+                  NEW SECURITY KEY
+                </label>
+                <input
+                  type="password"
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                  required
+                  autoFocus
+                  style={{
+                    width: '100%', padding: '0.75rem 1rem',
+                    background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
+                    fontSize: '0.8125rem', color: THEME.colors.black,
+                    outline: 'none', borderRadius: '4px',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%', padding: '0.875rem',
+                  background: THEME.colors.black,
+                  color: THEME.colors.white, border: `1px solid ${THEME.colors.black}`,
+                  fontSize: '0.75rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer',
+                  borderRadius: '4px',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                {loading ? '[ UPDATING ACCESS KEY... ]' : 'UPDATE ACCESS KEY →'}
+              </button>
+            </form>
+          )}
 
           {/* Footer */}
           <div style={{

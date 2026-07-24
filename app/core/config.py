@@ -1,7 +1,9 @@
 import secrets
 from typing import Any, Union
-from pydantic import AnyHttpUrl, EmailStr, validator
-from pydantic_settings import BaseSettings
+from pydantic import AnyHttpUrl, EmailStr, field_validator, ValidationInfo
+from pydantic_settings import BaseSettings, SettingsConfigDict
+import dotenv
+dotenv.load_dotenv(override=True)
 
 class Settings(BaseSettings):
     """
@@ -10,18 +12,19 @@ class Settings(BaseSettings):
     """
     PROJECT_NAME: str = "Karibu Credit Backend"
     API_V1_STR: str = "/api/v1"
-    
+
     # SECURITY
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
-    
+
     # CORS
     BACKEND_CORS_ORIGINS: list[AnyHttpUrl] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
 
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
     def assemble_cors_origins(cls, v: Union[str, list[str]]) -> Union[list[str], str]:
         """
         Validates and parses the CORS origins from a string or list.
@@ -41,6 +44,12 @@ class Settings(BaseSettings):
     KCB_CLIENT_ID: str = ""
     KCB_CLIENT_SECRET: str = ""
 
+    # OTP GATEWAY
+    OTP_GATEWAY_URL: str = "https://excavate-undying-atom.ngrok-free.dev"
+    OTP_GATEWAY_USER: str = "sms"
+    OTP_GATEWAY_PASS: str = "OTP"
+    OTP_PENDING_TOKEN_EXPIRE_MINUTES: int = 5
+
     # DATABASES
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
@@ -48,14 +57,23 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "karibu_db"
     SQLALCHEMY_DATABASE_URI: str | None = None
 
-    @validator("SQLALCHEMY_DATABASE_URI", pre=True)
-    def assemble_db_connection(cls, v: str | None, values: dict[str, Any]) -> Any:
+    # REDIS & CELERY
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+
+
+    @field_validator("SQLALCHEMY_DATABASE_URI", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: str | None, info: ValidationInfo) -> Any:
         if isinstance(v, str):
             return v
-        return f"postgresql+asyncpg://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}@{values.get('POSTGRES_SERVER')}/{values.get('POSTGRES_DB')}"
+        return f"postgresql+asyncpg://{info.data.get('POSTGRES_USER')}:{info.data.get('POSTGRES_PASSWORD')}@{info.data.get('POSTGRES_SERVER')}/{info.data.get('POSTGRES_DB')}"
 
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        case_sensitive=True,
+        env_file=".env",
+        extra="ignore"
+    )
 
 settings = Settings()

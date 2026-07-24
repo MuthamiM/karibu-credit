@@ -71,6 +71,8 @@ export default function BorrowersPage() {
   const [crbChecking, setCrbChecking] = useState(false);
   const [crbResult, setCrbResult] = useState<{ score: number; grading: string } | null>(null);
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportStatus, setExportStatus] = useState('');
 
   // Load borrowers and loans concurrently
   useEffect(() => {
@@ -93,6 +95,195 @@ export default function BorrowersPage() {
     }
     loadData();
   }, []);
+
+  const fetchAllBorrowers = async (): Promise<Borrower[]> => {
+    const allBorrowers: Borrower[] = [];
+    let skip = 0;
+    const PAGE = 100;
+    while (true) {
+      const batch = await fetchApi(`/users/?role=borrower&skip=${skip}&limit=${PAGE}`);
+      if (!Array.isArray(batch)) throw new Error('Unexpected borrowers response');
+      allBorrowers.push(...batch);
+      if (batch.length < PAGE) break;
+      skip += PAGE;
+    }
+    return allBorrowers;
+  };
+
+  const createCsv = (borrowers: Borrower[], loans: Loan[]) => {
+    const escapeValue = (value: unknown) => {
+      if (value === null || value === undefined) return '';
+      const text = String(value);
+      const shouldQuote = /[\",\n\r]/.test(text);
+      const escaped = text.replace(/"/g, '""');
+      return shouldQuote ? `"${escaped}"` : escaped;
+    };
+
+    const header = [
+      'Borrower ID',
+      'Full Name',
+      'Email',
+      'Phone Number',
+      'Active',
+      'Borrower Total Principal',
+      'Borrower Total Repaid',
+      'Borrower Total Outstanding',
+      'Borrower Loan Count',
+      'Borrower Profit',
+      'Borrower Loss',
+      'Loan ID',
+      'Application No',
+      'Product Type',
+      'Status',
+      'Principal Amount',
+      'Total Paid',
+      'Total Payable',
+      'Outstanding Balance',
+      'Tenure Months',
+      'Created At',
+      'Days Since Disbursement',
+      'Age Category',
+      'Cleared',
+      'Delinquent',
+      'Loan Profit',
+      'Customer Code',
+      'Customer National ID',
+    ];
+
+    const rows = [header.map(escapeValue).join(',')];
+
+    const loanIndex = new Map<number, Loan[]>();
+    loans.forEach((loan) => {
+      const arr = loanIndex.get(loan.user_id) || [];
+      arr.push(loan);
+      loanIndex.set(loan.user_id, arr);
+    });
+
+    borrowers.forEach((borrower) => {
+      const borrowerLoans = loanIndex.get(borrower.id) || [];
+
+      const borrowerTotalPrincipal = borrowerLoans.reduce((s, l) => s + (l.principal_amount || 0), 0);
+      const borrowerTotalRepaid = borrowerLoans.reduce((s, l) => s + (l.total_paid || 0), 0);
+      const borrowerTotalOutstanding = borrowerLoans.reduce((s, l) => s + (l.outstanding_balance || 0), 0);
+      const borrowerLoanCount = borrowerLoans.length;
+      const borrowerProfit = borrowerLoans.reduce((s, l) => s + ((l.total_paid || 0) - (l.principal_amount || 0)), 0);
+      const borrowerLoss = borrowerLoans.reduce((s, l) => {
+        const isDefault = (l.status === 'defaulted' || l.status === 'written_off' || (l.status === 'closed' && (l.outstanding_balance || 0) > 0));
+        return s + (isDefault ? (l.outstanding_balance || 0) : 0);
+      }, 0);
+
+      if (borrowerLoans.length === 0) {
+        rows.push([
+          borrower.id,
+          borrower.full_name,
+          borrower.email,
+          borrower.phone_number || '',
+          borrower.is_active ? 'Yes' : 'No',
+          borrowerTotalPrincipal,
+          borrowerTotalRepaid,
+          borrowerTotalOutstanding,
+          borrowerLoanCount,
+          borrowerProfit,
+          borrowerLoss,
+          '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+        ].map(escapeValue).join(','));
+        return;
+      }
+
+      borrowerLoans.forEach((loan) => {
+        const createdAt = loan.created_at ? new Date(loan.created_at) : null;
+        const daysSince = createdAt ? Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)) : '';
+        let ageCategory = '';
+        if (typeof daysSince === 'number') {
+          if (daysSince <= 30) ageCategory = 'Recent (<=30d)';
+          else if (daysSince <= 180) ageCategory = 'Medium (31-180d)';
+          else ageCategory = 'Old (>180d)';
+        }
+
+        const cleared = loan.status === 'cleared' || loan.status === 'closed';
+        const delinquent = !cleared && (loan.outstanding_balance || 0) > 0 && (typeof daysSince === 'number' ? daysSince > 30 : false);
+        const loanProfit = (loan.total_paid || 0) - (loan.principal_amount || 0);
+
+        rows.push([
+          borrower.id,
+          borrower.full_name,
+          borrower.email,
+          borrower.phone_number || '',
+          borrower.is_active ? 'Yes' : 'No',
+          borrowerTotalPrincipal,
+          borrowerTotalRepaid,
+          borrowerTotalOutstanding,
+          borrowerLoanCount,
+          borrowerProfit,
+          borrowerLoss,
+          loan.id,
+          loan.application_no || '',
+          loan.product_type || '',
+          loan.status || '',
+          loan.principal_amount || 0,
+          loan.total_paid || 0,
+          loan.total_payable ?? '',
+          loan.outstanding_balance || 0,
+          loan.tenure_months ?? '',
+          loan.created_at || '',
+          daysSince,
+          ageCategory,
+          cleared ? 'Yes' : 'No',
+          delinquent ? 'Yes' : 'No',
+          loanProfit,
+          loan.customer?.customer_code || '',
+          loan.customer?.national_id || '',
+        ].map(escapeValue).join(','));
+      });
+    });
+
+    return rows.join('\r\n');
+  };
+
+  const exportAllBorrowersExcel = async () => {
+    setExportingExcel(true);
+    setExportStatus('Preparing Excel export...');
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      setExportStatus('User not authenticated. Please login first.');
+      setExportingExcel(false);
+      window.setTimeout(() => setExportStatus(''), 8000);
+      return;
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api/v1';
+    try {
+      const response = await fetch(`${baseUrl}/users/export?role=borrower`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(errorText || `Export failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'karibu-borrowers-detailed-export.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      setExportStatus('Excel export started. Check your downloads folder.');
+    } catch (err: unknown) {
+      setExportStatus(err instanceof Error ? err.message : 'Excel export failed.');
+    } finally {
+      setExportingExcel(false);
+      window.setTimeout(() => setExportStatus(''), 8000);
+    }
+  };
 
   // Filter borrowers list based on search
   const filteredBorrowers = useMemo(() => {
@@ -260,12 +451,25 @@ export default function BorrowersPage() {
           <p className={THEME.classes.subtitle}>ADMINISTRATIVE INTERFACE</p>
           <h2 className={THEME.classes.title}>Customer Portfolio & Credit Risk</h2>
         </div>
-        <Link href="/dashboard/borrowers/new" className={THEME.classes.btnPrimary}>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
-          </svg>
-          Onboard Borrower
-        </Link>
+        <div className="flex flex-wrap gap-3 items-center">
+          <button
+            type="button"
+            onClick={exportAllBorrowersExcel}
+            disabled={exportingExcel}
+            className="border border-black bg-white text-black px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-colors disabled:opacity-50"
+          >
+            {exportingExcel ? 'EXPORTING EXCEL SHEET...' : 'EXPORT EXCEL SHEET'}
+          </button>
+          {exportStatus && (
+            <div className="text-xs font-mono text-zinc-600 mt-1 w-full">{exportStatus}</div>
+          )}
+          <Link href="/dashboard/borrowers/new" className={THEME.classes.btnPrimary}>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+            </svg>
+            Onboard Borrower
+          </Link>
+        </div>
       </div>
 
       {/* Main Split Interface */}

@@ -13,25 +13,8 @@ class BranchResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
-class CustomerResponse(BaseModel):
-    id: int
-    customer_code: str
-    user_id: Optional[int] = None
-    national_id: str
-    full_name: str
-    phone: str
-    kra_pin: Optional[str] = None
-    date_of_birth: Optional[date] = None
-    gender: Gender
-    kyc_status: KycStatus
-    credit_score: int
-    max_loan_limit: float
-    blacklisted: bool
-    blacklisted_reason: Optional[str] = None
-    branch_id: Optional[int] = None
-    is_repeat_borrower: bool
-    
-    model_config = ConfigDict(from_attributes=True)
+from app.schemas.customer import CustomerResponse
+
 
 class LoanProductResponse(BaseModel):
     id: int

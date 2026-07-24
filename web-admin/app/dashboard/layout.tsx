@@ -69,7 +69,7 @@ const ALL_SECTIONS = [
   {
     title: 'Risk & Compliance',
     items: [
-      { label: 'CRB Check',         path: '/dashboard/crb-check',          icon: 'doc'   },
+      { label: 'Credit Appraisal',  path: '/dashboard/crb-check',          icon: 'doc'   },
       { label: 'Collateral Ledger', path: '/dashboard/collateral',          icon: 'shield' },
       { label: 'Collections Board', path: '/dashboard/collections',         icon: 'stack'  },
       { label: 'PAR & NPL Report',  path: '/dashboard/portfolio-health',    icon: 'chart'  },
@@ -82,6 +82,7 @@ const ALL_SECTIONS = [
       { label: 'Audit Trail',       path: '/dashboard/audit-trail',        icon: 'clock'  },
       { label: 'Penalty Settings',  path: '/dashboard/penalty-settings',   icon: 'gear'   },
       { label: 'Amortization',      path: '/dashboard/amortization',       icon: 'cal'    },
+      { label: 'My Security & OTP', path: '/dashboard/settings',           icon: 'shield' },
     ],
   },
   {
@@ -106,18 +107,18 @@ function getFilteredSections(role: string) {
   if (payments.length) filtered.push({ title: 'Payments', items: payments });
 
   const risk = [];
-  if (['loan_officer','compliance','credit_engine'].includes(role)) risk.push(ALL_SECTIONS[2].items[0]);
+  if (['loan_officer', 'branch_manager', 'finance', 'compliance', 'credit_engine'].includes(role)) risk.push(ALL_SECTIONS[2].items[0]);
   if (['loan_officer','collections'].includes(role)) risk.push(ALL_SECTIONS[2].items[1]);
   if (['collections'].includes(role)) risk.push(ALL_SECTIONS[2].items[2]);
   if (['branch_manager','collections'].includes(role)) risk.push(ALL_SECTIONS[2].items[3]);
   if (risk.length) filtered.push({ title: 'Risk & Compliance', items: risk });
 
-  const sys = [];
+  const sys = [ALL_SECTIONS[3].items[4]]; // Security & OTP is accessible to all logged in users
   if (['collections'].includes(role)) sys.push(ALL_SECTIONS[3].items[0]);
   if (['compliance','finance'].includes(role)) sys.push(ALL_SECTIONS[3].items[1]);
   if (['finance','credit_engine'].includes(role)) sys.push(ALL_SECTIONS[3].items[2]);
   if (['loan_officer'].includes(role)) sys.push(ALL_SECTIONS[3].items[3]);
-  if (sys.length) filtered.push({ title: 'System & Policy', items: sys });
+  filtered.push({ title: 'System & Policy', items: sys });
 
   const ext = [];
   if (['loan_officer','branch_manager'].includes(role)) ext.push(ALL_SECTIONS[4].items[0]); // Group Lending
@@ -127,6 +128,7 @@ function getFilteredSections(role: string) {
 
   return filtered;
 }
+
 
 /* ─── Breadcrumb helper ─── */
 function pageName(pathname: string): string {
@@ -138,6 +140,7 @@ function pageName(pathname: string): string {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
+  const [topSearchValue, setTopSearchValue] = useState<string>('');
   const [user,       setUser]       = useState<any>(null);
   const [activeRole, setActiveRole] = useState<string>('loan_officer');
   const [loading,    setLoading]    = useState<boolean>(true);
@@ -172,18 +175,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       try {
         const profile = await fetchApi('/users/me');
         setUser(profile);
-        const saved = localStorage.getItem('preview_role');
-        const role  = saved || profile.role;
+        const role = profile.role ? profile.role.toLowerCase() : 'super_admin';
         setActiveRole(role);
-        if (!saved) localStorage.setItem('preview_role', profile.role);
       } catch {
-        /* silent */
+        router.push('/login');
       } finally {
         setLoading(false);
       }
     }
     fetchProfile();
   }, []);
+
+
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      setTopSearchValue(sp.get('search') ?? '');
+    } catch {
+      setTopSearchValue('');
+    }
+  }, [pathname]);
+
+  const handleTopSearchChange = (value: string) => {
+    setTopSearchValue(value);
+    try {
+      const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      if (value) params.set('search', value);
+      else params.delete('search');
+      router.replace(`${pathname}${params.toString() ? `?${params.toString()}` : ''}`);
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     const sync = () => {
@@ -329,30 +352,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Center: Search (flexible) */}
           <div style={{ flex: '1 1 auto', minWidth: 0, maxWidth: 200, display:'flex', alignItems:'center', background:'#ffffff', border:'1px solid #000', borderRadius: 0, padding:'0.35rem 0.75rem' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="2.5" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input type="text" placeholder="SEARCH..." style={{ border:'none', outline:'none', background:'transparent', fontSize:'9px', fontFamily: 'monospace', textTransform: 'uppercase', marginLeft:'0.4rem', width:'100%', color:THEME.colors.textPrimary }} disabled />
+            <input
+              type="text"
+              placeholder="SEARCH..."
+              value={topSearchValue}
+              onChange={(e) => handleTopSearchChange(e.target.value)}
+              style={{ border:'none', outline:'none', background:'transparent', fontSize:'9px', fontFamily: 'monospace', textTransform: 'uppercase', marginLeft:'0.4rem', width:'100%', color:THEME.colors.textPrimary }}
+            />
           </div>
 
           {/* Right: actions (never shrink) */}
-          <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexShrink: 0 }}>
-            {isPrivileged && (
-              <div style={{
-                display:'flex', alignItems:'center', gap:'0.35rem',
-                background:'#ffffff', border:'1px solid #000',
-                borderRadius:0, padding:'0.35rem 0.625rem',
-                fontSize:'9px', fontFamily: 'monospace', textTransform: 'uppercase', color:THEME.colors.textSecondary, whiteSpace: 'nowrap',
-              }}>
-                <span style={{ fontWeight:700, color:THEME.colors.textMuted }}>Role:</span>
-                <select
-                  value={activeRole}
-                  onChange={e => handleRoleChange(e.target.value)}
-                  style={{ background:'transparent', border:'none', outline:'none', fontSize:'9px', fontWeight:900, color:'#000', cursor:'pointer' }}
-                >
-                  {Object.entries(ROLE_META).map(([val, meta]) => (
-                    <option key={val} value={val}>{meta.label}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto', flexShrink: 0 }}>
+            <Link
+              href="/dashboard/settings"
+              title="Account Security & OTP Settings"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                background: '#ffffff', border: '1px solid #000',
+                borderRadius: 0, padding: '0.35rem 0.625rem',
+                fontSize: '9px', fontFamily: 'monospace', textTransform: 'uppercase',
+                color: '#000', whiteSpace: 'nowrap', textDecoration: 'none', fontWeight: 800
+              }}
+            >
+              <Icon d={ICONS.shield} size={12} />
+              <span>ROLE: {user?.role || 'STAFF'}</span>
+            </Link>
+
 
             <div style={{ position: 'relative' }}>
               <button

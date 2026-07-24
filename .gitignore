@@ -160,3 +160,9 @@ logfile
 .vscode/
 .idea/
 .gemini/
+
+# Temporary / Binary files
+*.bak
+*.exe
+*.zip
+

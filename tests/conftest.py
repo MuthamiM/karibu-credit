@@ -8,6 +8,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.future import select
 
 from app.main import app
+from app.celery_app import celery_app
+celery_app.conf.task_always_eager = True
 from app.db.base_class import Base
 from app.db.session import get_db
 from app.core.security import get_password_hash
@@ -27,15 +29,15 @@ TestingSessionLocal = sessionmaker(
     bind=test_engine, class_=AsyncSession, autocommit=False, autoflush=False, expire_on_commit=False
 )
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for each test case."""
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+from unittest.mock import AsyncMock, patch
+
+@pytest.fixture(autouse=True)
+def mock_otp_gateway():
+    with patch("app.api.endpoints.auth.send_otp", new_callable=AsyncMock) as mock_send, \
+         patch("app.api.endpoints.auth.verify_otp", new_callable=AsyncMock) as mock_verify:
+        mock_send.return_value = {"status": "sent"}
+        mock_verify.return_value = True
+        yield mock_send, mock_verify
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def setup_test_db():
@@ -97,6 +99,7 @@ async def setup_test_db():
         super_admin = User(
             email="admin@karibucredit.co.ke",
             full_name="Chief Administrator",
+            phone_number="254700000001",
             hashed_password=get_password_hash("SuperSecret123!"),
             role=UserRole.SUPER_ADMIN,
             is_active=True
@@ -104,6 +107,7 @@ async def setup_test_db():
         loan_officer = User(
             email="officer@karibucredit.co.ke",
             full_name="Officer Jane Mwangi",
+            phone_number="254700000002",
             hashed_password=get_password_hash("SuperSecret123!"),
             role=UserRole.LOAN_OFFICER,
             is_active=True

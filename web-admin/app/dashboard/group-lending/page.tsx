@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { fetchApi } from '../../../lib/api';
 import { THEME } from '@/theme';
 
@@ -94,6 +94,12 @@ export default function GroupLendingPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
 
+  /* Joint Liability Simulator states */
+  const [simulatingDefault, setSimulatingDefault] = useState(false);
+  const [defaultingMemberId, setDefaultingMemberId] = useState('');
+  const [defaultAmount, setDefaultAmount] = useState('60000');
+  const [simulationResult, setSimulationResult] = useState<any | null>(null);
+
   async function loadData() {
     try {
       const [groupsData, borrowersData] = await Promise.all([
@@ -121,9 +127,16 @@ export default function GroupLendingPage() {
 
   async function viewGroupDetails(groupId: number) {
     setDetailLoading(true);
+    // Reset simulator when opening a new group
+    setSimulatingDefault(false);
+    setDefaultingMemberId('');
+    setSimulationResult(null);
     try {
       const detail = await fetchApi(`/groups/${groupId}`);
       setSelectedGroup(detail);
+      if (detail.members && detail.members.length > 0) {
+        setDefaultingMemberId(String(detail.members[0].customer_id));
+      }
     } catch {
       /* silent */
     } finally {
@@ -198,6 +211,78 @@ export default function GroupLendingPage() {
     }
   }
 
+  // Group risk categorization profiling
+  const groupRiskMeta = useMemo(() => {
+    if (!selectedGroup) return null;
+    const count = selectedGroup.members?.length || 0;
+    if (count < 3) {
+      return {
+        label: 'CRITICAL',
+        color: '#dc2626',
+        description: 'Insufficient co-guarantors. Joint liability frameworks require >= 3 active members.'
+      };
+    } else if (count <= 4) {
+      return {
+        label: 'HIGH RISK',
+        color: '#d97706',
+        description: 'Narrow liability base. Co-guarantor claim exposure per member is elevated.'
+      };
+    } else if (count <= 7) {
+      return {
+        label: 'MEDIUM RISK',
+        color: '#2563eb',
+        description: 'Optimal risk-sharing. Co-signed liability balances correctly.'
+      };
+    } else {
+      return {
+        label: 'LOW RISK',
+        color: '#16a34a',
+        description: 'Well diversified joint liability pool. Negligible co-guarantor default exposure.'
+      };
+    }
+  }, [selectedGroup]);
+
+  // Joint guarantee share percent
+  const guarantorSharePercent = useMemo(() => {
+    if (!selectedGroup || !selectedGroup.members || selectedGroup.members.length === 0) return 0;
+    return (100 / selectedGroup.members.length);
+  }, [selectedGroup]);
+
+  // Execute co-guarantor claim distribution calculations
+  const runDefaultRedistribution = () => {
+    if (!selectedGroup || !selectedGroup.members || selectedGroup.members.length < 2) {
+      alert("At least two co-guarantor members are required to redistribute liability claims.");
+      return;
+    }
+    const defId = parseInt(defaultingMemberId);
+    const defaultingMember = selectedGroup.members.find(m => m.customer_id === defId);
+    if (!defaultingMember) {
+      alert("Select a defaulting member first.");
+      return;
+    }
+
+    const amt = parseFloat(defaultAmount) || 0;
+    if (amt <= 0) {
+      alert("Please specify a valid default debt claim amount.");
+      return;
+    }
+
+    const coGuarantors = selectedGroup.members.filter(m => m.customer_id !== defId);
+    const splitAmount = Math.round((amt / coGuarantors.length) * 100) / 100;
+
+    setSimulationResult({
+      defaultingMemberName: defaultingMember.customer_name || `Customer #${defaultingMember.customer_id}`,
+      totalDefault: amt,
+      splitAmount,
+      coGuarantors: coGuarantors.map(cg => ({
+        name: cg.customer_name || `Customer #${cg.customer_id}`,
+        phone: customers.find(c => c.id === cg.customer_id)?.phone || 'No Phone',
+        guaranteeSharePercent: guarantorSharePercent.toFixed(1),
+        claimedAmount: splitAmount
+      }))
+    });
+  };
+
   /* ─── Loading / Error ─── */
   if (loading) {
     return (
@@ -225,7 +310,7 @@ export default function GroupLendingPage() {
           <p className={THEME.classes.subtitle}>Joint Liability</p>
           <h2 className={THEME.classes.title + " mt-1"}>Group Lending Management</h2>
           <p className="text-xs text-zinc-500 mt-2 leading-relaxed max-w-2xl">
-            Create and manage lending groups, onboard members, and process group loan applications under joint liability frameworks.
+            Create and manage lending groups, onboard members, and analyze co-guarantor claim distribution ratios under joint liability frameworks.
           </p>
         </div>
         <button
@@ -368,7 +453,7 @@ export default function GroupLendingPage() {
 
         {/* Detail Panel */}
         {selectedGroup && (
-          <div className={`${THEME.classes.card} ${isDetailExpanded ? 'lg:col-span-12' : 'lg:col-span-4'} space-y-4 max-h-[calc(100vh-340px)] overflow-y-auto`}>
+          <div className={`${THEME.classes.card} ${isDetailExpanded ? 'lg:col-span-12' : 'lg:col-span-4'} space-y-4 max-h-[calc(100vh-220px)] overflow-y-auto`}>
             <div className="flex justify-between items-center border-b border-black pb-3">
               <div className="flex items-center gap-2">
                 <h3 className={THEME.classes.sectionTitle}>{selectedGroup.group_name}</h3>
@@ -400,10 +485,102 @@ export default function GroupLendingPage() {
               </div>
               <button onClick={() => { setSelectedGroup(null); setIsDetailExpanded(false); }} className="font-bold text-xs uppercase hover:underline">✕ Close</button>
             </div>
+            
             <div className="flex gap-3 font-mono text-[10px] items-center">
               <span className="text-zinc-500 font-bold">{selectedGroup.group_code}</span>
               {statusBadge(selectedGroup.status)}
             </div>
+
+            {/* NEW FEATURE: Joint Liability Credit Risk Profile */}
+            {groupRiskMeta && (
+              <div style={{ border: '1px solid #000', padding: '10px', background: '#fafafa', fontFamily: 'monospace', fontSize: '11px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontWeight: 'bold', fontSize: '9px', color: '#71717a' }}>JOINT LIABILITY PROFILE:</span>
+                  <span style={{ fontWeight: 'bold', color: groupRiskMeta.color }}>{groupRiskMeta.label}</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '10px', textTransform: 'none', lineHeight: 1.4, color: '#000' }}>
+                  {groupRiskMeta.description}
+                </p>
+                <div style={{ marginTop: 8, borderTop: '1px dashed #ccc', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                  <span>Individual Guarantee Share:</span>
+                  <span style={{ fontWeight: 'bold' }}>{guarantorSharePercent.toFixed(1)}%</span>
+                </div>
+              </div>
+            )}
+
+            {/* NEW FEATURE: Joint Liability Claims Redistribution Simulator */}
+            {selectedGroup.members && selectedGroup.members.length >= 2 && (
+              <div style={{ border: '1px solid #000', padding: '12px', background: '#fff', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #000', paddingBottom: 4 }}>
+                  <h4 style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>Default Claims Simulator</h4>
+                  <button
+                    type="button"
+                    onClick={() => setSimulatingDefault(!simulatingDefault)}
+                    style={{ fontSize: '9px', fontWeight: 'bold', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    {simulatingDefault ? 'Hide Sandbox' : 'Simulate Default'}
+                  </button>
+                </div>
+
+                {simulatingDefault && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '10px', fontFamily: 'monospace' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '8px', fontWeight: 'bold', marginBottom: 2 }}>SELECT DEFAULTING MEMBER</label>
+                      <select
+                        value={defaultingMemberId}
+                        onChange={(e) => setDefaultingMemberId(e.target.value)}
+                        className={THEME.classes.input}
+                        style={{ height: '28px', padding: '2px 6px', fontSize: '10px' }}
+                      >
+                        {selectedGroup.members.map(m => (
+                          <option key={m.id} value={m.customer_id}>{m.customer_name || `Borrower #${m.customer_id}`}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '8px', fontWeight: 'bold', marginBottom: 2 }}>DEFAULT LIQUIDATION AMOUNT (KES)</label>
+                      <input
+                        type="number"
+                        value={defaultAmount}
+                        onChange={(e) => setDefaultAmount(e.target.value)}
+                        className={THEME.classes.input}
+                        style={{ height: '28px', padding: '2px 6px', fontSize: '10px' }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={runDefaultRedistribution}
+                      className={THEME.classes.btnPrimary}
+                      style={{ fontSize: '9px', padding: '4px 8px', width: '100%', marginTop: 2 }}
+                    >
+                      Redistribute Claim to Co-Guarantors
+                    </button>
+
+                    {simulationResult && (
+                      <div style={{ marginTop: 8, padding: '8px', border: '1px solid #ef4444', background: '#fee2e2', color: '#000', fontSize: '10px' }}>
+                        <div style={{ fontWeight: 'bold', color: '#b91c1c', marginBottom: 4, textTransform: 'uppercase' }}>
+                          ⚠️ LIABILITY CLAIMS REDISTRIBUTED:
+                        </div>
+                        <p style={{ margin: '0 0 6px 0', textTransform: 'none', lineHeight: 1.3 }}>
+                          <strong>{simulationResult.defaultingMemberName}</strong> default of <strong>KES {simulationResult.totalDefault.toLocaleString()}</strong> has been claimed proportionally from co-signers:
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {simulationResult.coGuarantors.map((cg: any, idx: number) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #fca5a5', paddingBottom: 2 }}>
+                              <span style={{ fontWeight: 'bold' }}>{cg.name}</span>
+                              <span style={{ fontWeight: 'black' }}>KES {cg.claimedAmount.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {selectedGroup.description && (
               <p className="text-xs text-zinc-500 uppercase leading-relaxed font-mono">{selectedGroup.description}</p>
             )}

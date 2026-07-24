@@ -15,7 +15,13 @@ async def test_group_lending_lifecycle(client, db_session):
         data={"username": "officer@karibucredit.co.ke", "password": "SuperSecret123!"}
     )
     assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
+    pending_token = login_response.json()["pending_token"]
+    verify_resp = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": pending_token, "code": "123456"}
+    )
+    assert verify_resp.status_code == 200
+    token = verify_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Fetch branch to use
@@ -139,7 +145,13 @@ async def test_loan_topup_lifecycle(client, db_session):
         data={"username": "officer@karibucredit.co.ke", "password": "SuperSecret123!"}
     )
     assert login_response.status_code == 200
-    token = login_response.json()["access_token"]
+    pending_token = login_response.json()["pending_token"]
+    verify_resp = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": pending_token, "code": "123456"}
+    )
+    assert verify_resp.status_code == 200
+    token = verify_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Fetch user, customer and product

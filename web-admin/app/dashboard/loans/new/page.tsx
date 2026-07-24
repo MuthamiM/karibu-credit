@@ -24,7 +24,7 @@ export default function CreateLoanPage() {
     interest_rate: 15.0,
     term_months: 6,
     loan_type: 'SALARY',
-    disbursement_method: 'LUMP_SUM'
+    disbursement_method: 'lump_sum'
   });
 
   useEffect(() => {
@@ -218,9 +218,9 @@ export default function CreateLoanPage() {
                 className={THEME.classes.input}
                 required
               >
-                <option value="LUMP_SUM">Lump Sum (Full Disbursement)</option>
-                <option value="PARTIAL">Partial (Multiple Tranches)</option>
-                <option value="STAGE_WISE">Stage Wise (Milestone based)</option>
+                <option value="lump_sum">Lump Sum (Full Disbursement)</option>
+                <option value="partial">Partial (Multiple Tranches)</option>
+                <option value="stage_wise">Stage Wise (Milestone based)</option>
               </select>
             </div>
           </div>

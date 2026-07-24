@@ -2,7 +2,7 @@
 export const THEME = {
   // Color tokens
   colors: {
-    bg: '#fafafa',
+    bg: '#FFF99',
     surface: '#ffffff',
     border: '#e4e4e7',
     borderStrong: '#000000',

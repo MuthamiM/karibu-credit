@@ -21,8 +21,18 @@ async def test_login_success(client):
     )
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    assert data["otp_required"] is True
+    assert "pending_token" in data
+
+    # Step 2: verify OTP to get access token
+    verify_resp = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": data["pending_token"], "code": "123456"}
+    )
+    assert verify_resp.status_code == 200
+    token_data = verify_resp.json()
+    assert "access_token" in token_data
+    assert token_data["token_type"] == "bearer"
 
 @pytest.mark.asyncio
 async def test_login_failure(client):
@@ -32,6 +42,131 @@ async def test_login_failure(client):
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Incorrect email or password"
+
+@pytest.mark.asyncio
+async def test_admin_reset_password_success(client):
+    # 1. Admin login
+    login_res = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "admin@karibucredit.co.ke", "password": "SuperSecret123!"}
+    )
+    token_res = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": login_res.json()["pending_token"], "code": "123456"}
+    )
+    token = token_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 2. Reset password for borrower (user_id = 3)
+    reset_res = await client.post(
+        "/api/v1/auth/admin/reset-password",
+        headers=headers,
+        json={"target_user_id": 3, "new_password": "NewSecretPassword123!"}
+    )
+    assert reset_res.status_code == 200
+    assert reset_res.json() == {"status": "password reset", "user_id": 3}
+
+    # 3. Verify borrower can login with new password
+    borrower_login = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "borrower@karibucredit.co.ke", "password": "NewSecretPassword123!"}
+    )
+    assert borrower_login.status_code == 200
+    assert borrower_login.json()["otp_required"] is True
+
+@pytest.mark.asyncio
+async def test_admin_reset_password_forbidden(client):
+    # 1. Officer login (non-admin)
+    login_res = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "officer@karibucredit.co.ke", "password": "SuperSecret123!"}
+    )
+    token_res = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": login_res.json()["pending_token"], "code": "123456"}
+    )
+    token = token_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 2. Non-admin attempts reset password -> HTTP 403
+    reset_res = await client.post(
+        "/api/v1/auth/admin/reset-password",
+        headers=headers,
+        json={"target_user_id": 1, "new_password": "UnauthorizedPassword!"}
+    )
+    assert reset_res.status_code == 403
+    assert reset_res.json()["detail"] == "Operation not permitted: insufficient privileges"
+
+@pytest.mark.asyncio
+async def test_otp_password_change_flow(client):
+    # 1. Login as admin
+    login_res = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "admin@karibucredit.co.ke", "password": "SuperSecret123!"}
+    )
+    token_res = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": login_res.json()["pending_token"], "code": "123456"}
+    )
+    access_token = token_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    # 2. Request password change OTP
+    req_otp_res = await client.post(
+        "/api/v1/auth/request-password-change-otp",
+        headers=headers
+    )
+    assert req_otp_res.status_code == 200
+    otp_data = req_otp_res.json()
+    assert otp_data["otp_required"] is True
+    assert "pending_token" in otp_data
+
+    # 3. Verify OTP for password reset (returns reset_token instead of access_token)
+    verify_otp_res = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": otp_data["pending_token"], "code": "123456"}
+    )
+    assert verify_otp_res.status_code == 200
+    confirm_data = verify_otp_res.json()
+    assert confirm_data["otp_confirmed"] is True
+    assert "reset_token" in confirm_data
+
+    # 4. Complete password change
+    complete_res = await client.post(
+        "/api/v1/auth/complete-password-change",
+        json={"reset_token": confirm_data["reset_token"], "new_password": "BrandNewPassword123!"}
+    )
+    assert complete_res.status_code == 200
+    assert complete_res.json() == {"status": "success", "detail": "Password updated successfully"}
+
+    # 5. Confirm user can now login with BrandNewPassword123!
+    login_new = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "admin@karibucredit.co.ke", "password": "BrandNewPassword123!"}
+    )
+    assert login_new.status_code == 200
+
+    # 6. Reset password back to SuperSecret123! for subsequent tests
+    token_res_new = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": login_new.json()["pending_token"], "code": "123456"}
+    )
+    req_otp_res2 = await client.post(
+        "/api/v1/auth/request-password-change-otp",
+        headers={"Authorization": f"Bearer {token_res_new.json()['access_token']}"}
+    )
+    verify_otp_res2 = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": req_otp_res2.json()["pending_token"], "code": "123456"}
+    )
+    await client.post(
+        "/api/v1/auth/complete-password-change",
+        json={"reset_token": verify_otp_res2.json()["reset_token"], "new_password": "SuperSecret123!"}
+    )
+
+
+
+
 
 @pytest.mark.asyncio
 async def test_get_products(client):
@@ -58,12 +193,17 @@ async def test_calculate_amortization(client):
 
 @pytest.mark.asyncio
 async def test_get_penalty_settings(client):
-    # Log in to get token
+    # Log in to get pending token
     login_response = await client.post(
         "/api/v1/auth/login",
         data={"username": "admin@karibucredit.co.ke", "password": "SuperSecret123!"}
     )
-    token = login_response.json()["access_token"]
+    pending_token = login_response.json()["pending_token"]
+    verify_resp = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": pending_token, "code": "123456"}
+    )
+    token = verify_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     response = await client.get("/api/v1/penalty-settings/", headers=headers)
@@ -86,7 +226,12 @@ async def test_update_penalty_settings_authorized(client, db_session):
         "/api/v1/auth/login",
         data={"username": "admin@karibucredit.co.ke", "password": "SuperSecret123!"}
     )
-    token = login_response.json()["access_token"]
+    pending_token = login_response.json()["pending_token"]
+    verify_resp = await client.post(
+        "/api/v1/auth/verify-otp",
+        json={"pending_token": pending_token, "code": "123456"}
+    )
+    token = verify_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     
     response = await client.put(

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.endpoints import auth, users, loans, webhooks, audit, penalty_settings, products, groups
+from app.api.endpoints import auth, users, loans, webhooks, audit, penalty_settings, products, groups, customers, reports, sms
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
@@ -11,4 +11,8 @@ api_router.include_router(audit.router, prefix="/audit", tags=["Compliance Audit
 api_router.include_router(penalty_settings.router, prefix="/penalty-settings", tags=["Penalty Settings"])
 api_router.include_router(products.router, prefix="/products", tags=["Loan Products"])
 api_router.include_router(groups.router, prefix="/groups", tags=["Group Lending"])
+api_router.include_router(customers.router, prefix="/customers", tags=["Customers"])
+api_router.include_router(reports.router, prefix="/reports", tags=["Reports & Analytics"])
+api_router.include_router(sms.router, prefix="/sms", tags=["SMS Gateway"])
+
 

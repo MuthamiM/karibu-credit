@@ -22,6 +22,21 @@ router = APIRouter()
 # Instantiate KCB Gateway Service
 kcb_gateway = KCBGateway()
 
+
+async def get_loan_with_relations(db: AsyncSession, loan_id: int) -> Loan:
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Loan)
+        .options(
+            selectinload(Loan.customer),
+            selectinload(Loan.product),
+            selectinload(Loan.branch),
+            selectinload(Loan.repayment_schedules)
+        )
+        .where(Loan.id == loan_id)
+    )
+    return result.scalars().first()
+
 @router.post("/apply", response_model=LoanResponse)
 async def apply_for_loan(
     loan_in: LoanCreate,
@@ -100,13 +115,16 @@ async def apply_for_loan(
     
     db.add(db_loan)
     await db.commit()
-    await db.refresh(db_loan)
+    db_loan = await get_loan_with_relations(db, db_loan.id)
     await log_audit_event(
         db,
         user=current_user.email,
         action="APPLY_LOAN",
         details=f"Applied for loan ID #{db_loan.id} (App No: {db_loan.application_no}) of KES {db_loan.principal_amount}"
     )
+    # Invalidate loan caches on mutation
+    from app.core.cache import cache_invalidate_pattern
+    await cache_invalidate_pattern("loans:*")
     return db_loan
 
 
@@ -181,7 +199,7 @@ async def create_loan_admin(
     
     db.add(db_loan)
     await db.commit()
-    await db.refresh(db_loan)
+    db_loan = await get_loan_with_relations(db, db_loan.id)
     await log_audit_event(
         db,
         user=current_user.email,
@@ -326,13 +344,19 @@ async def approve_loan(
             db.add(fee_trx)
         
     await db.commit()
-    await db.refresh(loan)
+    loan = await get_loan_with_relations(db, loan.id)
     await log_audit_event(
         db,
         user=current_user.email,
         action="APPROVE_LOAN",
         details=f"Approved loan ID #{loan.id} (Status: {loan.status})"
     )
+    # Invalidate loan caches + fire async notification
+    from app.core.cache import cache_invalidate_pattern
+    await cache_invalidate_pattern("loans:*")
+    from app.tasks.notification_tasks import notify_loan_approved
+    borrower_name = loan.customer.full_name if loan.customer else "Unknown"
+    notify_loan_approved.delay(loan.id, borrower_name)
     return loan
 
 @router.post("/{loan_id}/disburse_tranche", response_model=LoanResponse)
@@ -410,7 +434,7 @@ async def disburse_tranche(
         db.add(fee_trx)
         
         await db.commit()
-        await db.refresh(loan)
+        loan = await get_loan_with_relations(db, loan.id)
         await log_audit_event(
             db,
             user=current_user.email,
@@ -446,7 +470,7 @@ async def reject_loan(
     
     loan.status = LoanStatus.REJECTED
     await db.commit()
-    await db.refresh(loan)
+    loan = await get_loan_with_relations(db, loan.id)
     await log_audit_event(
         db,
         user=current_user.email,
@@ -463,12 +487,21 @@ async def get_loan_statistics(
     """
     Dashboard Analytics. Returns total disbursed, total expected, and total default amounts.
     Restricted to Finance and Super Admin.
+    Uses Redis cache-aside pattern (60s TTL) to reduce DB load on the dashboard.
     """
     if current_user.role not in [UserRole.FINANCE, UserRole.SUPER_ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="You are not authorized to view global statistics."
         )
+
+    # ── Cache-aside: check Redis first ──────────────────────────────
+    from app.core.cache import cache_get, cache_set, CACHE_TTL_SHORT
+    CACHE_KEY = "loans:stats:global"
+    cached = await cache_get(CACHE_KEY)
+    if cached is not None:
+        cached["_cached"] = True
+        return cached
 
     # 1. Total Principal Disbursed
     res_disbursed = await db.execute(
@@ -505,14 +538,19 @@ async def get_loan_statistics(
     )
     total_fees = res_tx.scalar() or 0.0
 
-    return {
+    stats_data = {
         "total_disbursed": total_disbursed,
         "total_expected_revenue": total_expected,
         "total_repaid": total_repaid,
         "total_defaulted_value": total_defaulted_value,
         "total_outstanding_value": (total_expected - total_repaid),
-        "total_fees": total_fees
+        "total_fees": total_fees,
+        "_cached": False,
     }
+
+    # ── Store in cache ──────────────────────────────────────────────
+    await cache_set(CACHE_KEY, stats_data, ttl=CACHE_TTL_SHORT)
+    return stats_data
 
 @router.get("/me", response_model=list[LoanResponse])
 async def get_my_loans(
