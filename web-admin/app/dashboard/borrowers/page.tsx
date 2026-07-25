@@ -317,7 +317,75 @@ export default function BorrowersPage() {
     return borrowers.filter((b) => {
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
-      return (
+    
+  // Handle Excel export
+  const handleExport = async () => {
+    try {
+      // Fetch all borrowers data
+      const allBorrowers = await fetchApi('/users/?role=borrower');
+      const allLoans = await fetchApi('/loans/');
+      
+      // Prepare data for export
+      const exportData = allBorrowers.map((borrower: any) => {
+        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+        const totalLoans = borrowerLoans.length;
+        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
+        const outstanding = totalAmount - totalPaid;
+        
+        return {
+          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
+          'Full Name': borrower.full_name || 'N/A',
+          'Email': borrower.email || 'N/A',
+          'Phone': borrower.phone_number || 'N/A',
+          'Status': borrower.is_active ? 'Active' : 'Inactive',
+          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
+          'Total Loans': totalLoans,
+          'Total Borrowed (KES)': totalAmount.toLocaleString(),
+          'Total Paid (KES)': totalPaid.toLocaleString(),
+          'Outstanding (KES)': outstanding.toLocaleString(),
+          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
+          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+        };
+      });
+      
+      // Create CSV content
+      if (exportData.length === 0) {
+        alert('No data to export');
+        return;
+      }
+      
+      const headers = Object.keys(exportData[0]);
+      const csvRows = [];
+      
+      // Add header row
+      csvRows.push(headers.join(','));
+      
+      // Add data rows
+      for (const row of exportData) {
+        const values = headers.map(header => {
+          const val = row[header] || '';
+          return \`"\${String(val).replace(/"/g, '""')}"\`;
+        });
+        csvRows.push(values.join(','));
+      }
+      
+      const csvString = csvRows.join('
+');
+      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting data. Please try again.');
+    }
+  };
+
+  return (
         b.full_name.toLowerCase().includes(q) ||
         b.email.toLowerCase().includes(q) ||
         (b.phone_number && b.phone_number.includes(q)) ||
@@ -485,7 +553,75 @@ export default function BorrowersPage() {
   }, [selectedBorrowerLoans]);
 
   if (loading) {
-    return (
+  
+  // Handle Excel export
+  const handleExport = async () => {
+    try {
+      // Fetch all borrowers data
+      const allBorrowers = await fetchApi('/users/?role=borrower');
+      const allLoans = await fetchApi('/loans/');
+      
+      // Prepare data for export
+      const exportData = allBorrowers.map((borrower: any) => {
+        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+        const totalLoans = borrowerLoans.length;
+        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
+        const outstanding = totalAmount - totalPaid;
+        
+        return {
+          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
+          'Full Name': borrower.full_name || 'N/A',
+          'Email': borrower.email || 'N/A',
+          'Phone': borrower.phone_number || 'N/A',
+          'Status': borrower.is_active ? 'Active' : 'Inactive',
+          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
+          'Total Loans': totalLoans,
+          'Total Borrowed (KES)': totalAmount.toLocaleString(),
+          'Total Paid (KES)': totalPaid.toLocaleString(),
+          'Outstanding (KES)': outstanding.toLocaleString(),
+          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
+          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+        };
+      });
+      
+      // Create CSV content
+      if (exportData.length === 0) {
+        alert('No data to export');
+        return;
+      }
+      
+      const headers = Object.keys(exportData[0]);
+      const csvRows = [];
+      
+      // Add header row
+      csvRows.push(headers.join(','));
+      
+      // Add data rows
+      for (const row of exportData) {
+        const values = headers.map(header => {
+          const val = row[header] || '';
+          return \`"\${String(val).replace(/"/g, '""')}"\`;
+        });
+        csvRows.push(values.join(','));
+      }
+      
+      const csvString = csvRows.join('
+');
+      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting data. Please try again.');
+    }
+  };
+
+  return (
       <div className="min-h-[500px] flex items-center justify-center bg-white border border-black p-8 text-black gap-3 font-mono">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
         LOADING DASHBOARD...
@@ -494,7 +630,75 @@ export default function BorrowersPage() {
   }
 
   if (error) {
-    return (
+  
+  // Handle Excel export
+  const handleExport = async () => {
+    try {
+      // Fetch all borrowers data
+      const allBorrowers = await fetchApi('/users/?role=borrower');
+      const allLoans = await fetchApi('/loans/');
+      
+      // Prepare data for export
+      const exportData = allBorrowers.map((borrower: any) => {
+        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+        const totalLoans = borrowerLoans.length;
+        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
+        const outstanding = totalAmount - totalPaid;
+        
+        return {
+          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
+          'Full Name': borrower.full_name || 'N/A',
+          'Email': borrower.email || 'N/A',
+          'Phone': borrower.phone_number || 'N/A',
+          'Status': borrower.is_active ? 'Active' : 'Inactive',
+          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
+          'Total Loans': totalLoans,
+          'Total Borrowed (KES)': totalAmount.toLocaleString(),
+          'Total Paid (KES)': totalPaid.toLocaleString(),
+          'Outstanding (KES)': outstanding.toLocaleString(),
+          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
+          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+        };
+      });
+      
+      // Create CSV content
+      if (exportData.length === 0) {
+        alert('No data to export');
+        return;
+      }
+      
+      const headers = Object.keys(exportData[0]);
+      const csvRows = [];
+      
+      // Add header row
+      csvRows.push(headers.join(','));
+      
+      // Add data rows
+      for (const row of exportData) {
+        const values = headers.map(header => {
+          const val = row[header] || '';
+          return \`"\${String(val).replace(/"/g, '""')}"\`;
+        });
+        csvRows.push(values.join(','));
+      }
+      
+      const csvString = csvRows.join('
+');
+      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting data. Please try again.');
+    }
+  };
+
+  return (
       <div className="bg-white border border-black p-8 text-black font-mono">
         <div className="flex items-center gap-3">
           <span></span>
@@ -503,6 +707,74 @@ export default function BorrowersPage() {
       </div>
     );
   }
+
+
+  // Handle Excel export
+  const handleExport = async () => {
+    try {
+      // Fetch all borrowers data
+      const allBorrowers = await fetchApi('/users/?role=borrower');
+      const allLoans = await fetchApi('/loans/');
+      
+      // Prepare data for export
+      const exportData = allBorrowers.map((borrower: any) => {
+        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+        const totalLoans = borrowerLoans.length;
+        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
+        const outstanding = totalAmount - totalPaid;
+        
+        return {
+          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
+          'Full Name': borrower.full_name || 'N/A',
+          'Email': borrower.email || 'N/A',
+          'Phone': borrower.phone_number || 'N/A',
+          'Status': borrower.is_active ? 'Active' : 'Inactive',
+          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
+          'Total Loans': totalLoans,
+          'Total Borrowed (KES)': totalAmount.toLocaleString(),
+          'Total Paid (KES)': totalPaid.toLocaleString(),
+          'Outstanding (KES)': outstanding.toLocaleString(),
+          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
+          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+        };
+      });
+      
+      // Create CSV content
+      if (exportData.length === 0) {
+        alert('No data to export');
+        return;
+      }
+      
+      const headers = Object.keys(exportData[0]);
+      const csvRows = [];
+      
+      // Add header row
+      csvRows.push(headers.join(','));
+      
+      // Add data rows
+      for (const row of exportData) {
+        const values = headers.map(header => {
+          const val = row[header] || '';
+          return \`"\${String(val).replace(/"/g, '""')}"\`;
+        });
+        csvRows.push(values.join(','));
+      }
+      
+      const csvString = csvRows.join('
+');
+      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting data. Please try again.');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -529,6 +801,13 @@ export default function BorrowersPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
             </svg>
             Onboard Borrower
+              <button
+                onClick={handleExport}
+                className="border border-black bg-white text-black px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-black hover:text-white transition-colors"
+                style={{ fontFamily: "monospace" }}
+              >
+                Export to Excel
+              </button>
           </Link>
         </div>
       </div>
@@ -587,7 +866,75 @@ export default function BorrowersPage() {
                   const rowCustomer = getBorrowerCustomer(user, rowLoans);
                   const isExpanded = expandedRowId === user.id;
                   const currentLoan = rowLoans.find((l) => l.status === 'disbursed' || l.status === 'active');
-                  return (
+                
+  // Handle Excel export
+  const handleExport = async () => {
+    try {
+      // Fetch all borrowers data
+      const allBorrowers = await fetchApi('/users/?role=borrower');
+      const allLoans = await fetchApi('/loans/');
+      
+      // Prepare data for export
+      const exportData = allBorrowers.map((borrower: any) => {
+        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+        const totalLoans = borrowerLoans.length;
+        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
+        const outstanding = totalAmount - totalPaid;
+        
+        return {
+          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
+          'Full Name': borrower.full_name || 'N/A',
+          'Email': borrower.email || 'N/A',
+          'Phone': borrower.phone_number || 'N/A',
+          'Status': borrower.is_active ? 'Active' : 'Inactive',
+          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
+          'Total Loans': totalLoans,
+          'Total Borrowed (KES)': totalAmount.toLocaleString(),
+          'Total Paid (KES)': totalPaid.toLocaleString(),
+          'Outstanding (KES)': outstanding.toLocaleString(),
+          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
+          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+        };
+      });
+      
+      // Create CSV content
+      if (exportData.length === 0) {
+        alert('No data to export');
+        return;
+      }
+      
+      const headers = Object.keys(exportData[0]);
+      const csvRows = [];
+      
+      // Add header row
+      csvRows.push(headers.join(','));
+      
+      // Add data rows
+      for (const row of exportData) {
+        const values = headers.map(header => {
+          const val = row[header] || '';
+          return \`"\${String(val).replace(/"/g, '""')}"\`;
+        });
+        csvRows.push(values.join(','));
+      }
+      
+      const csvString = csvRows.join('
+');
+      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting data. Please try again.');
+    }
+  };
+
+  return (
                     <div key={user.id}>
                     <div
                       onClick={() => {
