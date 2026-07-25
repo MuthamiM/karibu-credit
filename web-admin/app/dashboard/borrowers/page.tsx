@@ -75,6 +75,7 @@ export default function BorrowersPage() {
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportStatus, setExportStatus] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   // Load borrowers and loans concurrently
   useEffect(() => {
@@ -242,50 +243,7 @@ export default function BorrowersPage() {
     return rows.join('\r\n');
   };
 
-  const exportAllBorrowersExcel = async () => {
-    setExportingExcel(true);
-    setExportStatus('Preparing Excel export...');
-
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token) {
-      setExportStatus('User not authenticated. Please login first.');
-      setExportingExcel(false);
-      window.setTimeout(() => setExportStatus(''), 8000);
-      return;
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001/api/v1';
-    try {
-      const response = await fetch(`${baseUrl}/users/export?role=borrower`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        throw new Error(errorText || `Export failed (${response.status})`);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'karibu-borrowers-detailed-export.xlsx';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      setExportStatus('Excel export started. Check your downloads folder.');
-    } catch (err: unknown) {
-      setExportStatus(err instanceof Error ? err.message : 'Excel export failed.');
-    } finally {
-      setExportingExcel(false);
-      window.setTimeout(() => setExportStatus(''), 8000);
-    }
-  };
+  
 
   // Resolve loans for any borrower by id (used by the inline row accordion)
   const getBorrowerLoans = (borrowerId: number) => loans.filter((l) => l.user_id === borrowerId);
@@ -319,69 +277,165 @@ export default function BorrowersPage() {
       const q = searchQuery.toLowerCase();
     
   // Handle Excel export
+  
+
+
+  // Handle Excel export
+  
+
+
+  // Comprehensive Export with ALL details and timestamps
+  
+
+  // Comprehensive Export with REAL data from database
   const handleExport = async () => {
     try {
-      // Fetch all borrowers data
-      const allBorrowers = await fetchApi('/users/?role=borrower');
-      const allLoans = await fetchApi('/loans/');
+      setExporting(true);
       
-      // Prepare data for export
-      const exportData = allBorrowers.map((borrower: any) => {
-        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+      // Fetch ALL data from database
+      const [borrowersData, loansData, transactionsData, customersData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/'),
+        fetchApi('/loans/transactions'),
+        fetchApi('/customers/')
+      ]);
+      
+      // Prepare comprehensive export data with REAL values
+      const exportData = borrowersData.map((borrower: any) => {
+        const customer = customersData.find((c: any) => c.user_id === borrower.id);
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const borrowerTransactions = transactionsData.filter((t: any) => 
+          borrowerLoans.some((l: any) => l.id === t.loan_id)
+        );
+        
+        const activeLoan = borrowerLoans.find((l: any) => l.status === 'active' || l.status === 'disbursed');
         const totalLoans = borrowerLoans.length;
-        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
-        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
-        const outstanding = totalAmount - totalPaid;
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        
+        const latestTransaction = borrowerTransactions.length > 0 
+          ? borrowerTransactions.reduce((a: any, b: any) => new Date(a.created_at) > new Date(b.created_at) ? a : b)
+          : null;
+        
+        const unpaidLoans = borrowerLoans.filter((l: any) => 
+          l.status === 'active' || l.status === 'disbursed' || l.status === 'pending'
+        );
+        
+        const paymentMethods = [...new Set(borrowerTransactions.map((t: any) => t.payment_method || ''))];
+        
+        let creditScore = customer?.credit_score || 0;
+        if (!creditScore && customer) {
+          const onTimePayments = borrowerLoans.filter((l: any) => 
+            l.status === 'cleared' && l.total_paid >= l.principal_amount
+          ).length;
+          const totalLoansCount = borrowerLoans.length;
+          const repaymentRate = totalLoansCount > 0 ? (onTimePayments / totalLoansCount) * 100 : 0;
+          
+          if (repaymentRate >= 90) creditScore = 750;
+          else if (repaymentRate >= 70) creditScore = 650;
+          else if (repaymentRate >= 50) creditScore = 550;
+          else if (repaymentRate >= 30) creditScore = 450;
+          else if (repaymentRate > 0) creditScore = 350;
+          else creditScore = 300;
+        }
+        
+        const formatDate = (date: string) => {
+          if (!date) return '';
+          try {
+            return new Date(date).toLocaleString('en-KE', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+              timeZone: 'Africa/Nairobi'
+            });
+          } catch {
+            return '';
+          }
+        };
         
         return {
-          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
-          'Full Name': borrower.full_name || 'N/A',
-          'Email': borrower.email || 'N/A',
-          'Phone': borrower.phone_number || 'N/A',
-          'Status': borrower.is_active ? 'Active' : 'Inactive',
-          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
-          'Total Loans': totalLoans,
-          'Total Borrowed (KES)': totalAmount.toLocaleString(),
-          'Total Paid (KES)': totalPaid.toLocaleString(),
-          'Outstanding (KES)': outstanding.toLocaleString(),
-          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
-          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+          'Customer Code': customer?.customer_code || '',
+          'Full Name': borrower.full_name || '',
+          'Email': borrower.email || '',
+          'Phone Number': borrower.phone_number || '',
+          'National ID': customer?.national_id || '',
+          'KRA PIN': customer?.kra_pin || '',
+          'Date of Birth': customer?.date_of_birth || '',
+          'Gender': customer?.gender || '',
+          'Account Status': borrower.is_active ? 'Active' : 'Inactive',
+          'KYC Status': customer?.kyc_status || 'Pending',
+          'Credit Score': creditScore || 0,
+          'Max Loan Limit (KES)': customer?.max_loan_limit?.toLocaleString() || '0',
+          'Total Loans Applied': totalLoans || 0,
+          'Total Borrowed (KES)': totalBorrowed.toLocaleString() || '0',
+          'Total Paid (KES)': totalPaid.toLocaleString() || '0',
+          'Total Outstanding (KES)': totalOutstanding.toLocaleString() || '0',
+          'Current Active Loan': activeLoan ? activeLoan.application_no || '' : '',
+          'Current Loan Status': activeLoan ? activeLoan.status : '',
+          'Current Loan Amount (KES)': activeLoan ? activeLoan.principal_amount?.toLocaleString() : '0',
+          'Current Loan Outstanding (KES)': activeLoan ? activeLoan.outstanding_balance?.toLocaleString() : '0',
+          'Current Loan Due Date': activeLoan ? formatDate(activeLoan.due_date) : '',
+          'Current Loan Disbursement Date': activeLoan ? formatDate(activeLoan.disbursed_at) : '',
+          'Unpaid Loans Count': unpaidLoans.length || 0,
+          'Unpaid Loans Amount (KES)': unpaidLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0).toLocaleString() || '0',
+          'Payment Methods Used': paymentMethods.length ? paymentMethods.join(', ') : '',
+          'Latest Transaction Date': latestTransaction ? formatDate(latestTransaction.created_at) : '',
+          'Latest Transaction Amount (KES)': latestTransaction ? latestTransaction.amount?.toLocaleString() : '0',
+          'Latest Transaction Type': latestTransaction ? latestTransaction.type : '',
+          'Latest Transaction Reference': latestTransaction ? latestTransaction.reference_code : '',
+          'Total Transactions': borrowerTransactions.length || 0,
+          'Blacklisted': customer?.blacklisted ? 'Yes' : 'No',
+          'Branch': borrower.branch?.name || '',
+          'Date Created': formatDate(borrower.created_at),
+          'Date Last Updated': formatDate(borrower.updated_at || borrower.created_at),
+          'Loan Application Dates': borrowerLoans.map((l: any) => formatDate(l.created_at)).filter(Boolean).join('; '),
+          'Loan Disbursement Dates': borrowerLoans.filter((l: any) => l.disbursed_at).map((l: any) => formatDate(l.disbursed_at)).filter(Boolean).join('; '),
+          'Loan Due Dates': borrowerLoans.filter((l: any) => l.due_date).map((l: any) => formatDate(l.due_date)).filter(Boolean).join('; ')
         };
       });
       
-      // Create CSV content
       if (exportData.length === 0) {
         alert('No data to export');
+        setExporting(false);
         return;
       }
       
       const headers = Object.keys(exportData[0]);
       const csvRows = [];
-      
-      // Add header row
+      const BOM = '\uFEFF';
       csvRows.push(headers.join(','));
       
-      // Add data rows
       for (const row of exportData) {
         const values = headers.map(header => {
-          const val = row[header] || '';
-          return \`"\${String(val).replace(/"/g, '""')}"\`;
+          let val = row[header] || '';
+          val = String(val);
+          val = val.replace(/"/g, '""');
+          return '"' + val + '"';
         });
         csvRows.push(values.join(','));
       }
       
-      const csvString = csvRows.join('
-');
-      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const csvString = BOM + csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = 'Borrowers_Full_Export_' + timestamp + '.csv';
       link.click();
       URL.revokeObjectURL(link.href);
       
+      setExporting(false);
+      alert('Export completed successfully!');
+      
     } catch (error) {
       console.error('Export error:', error);
-      alert('Error exporting data. Please try again.');
+      setExporting(false);
+      alert('Error exporting data: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -555,69 +609,165 @@ export default function BorrowersPage() {
   if (loading) {
   
   // Handle Excel export
+  
+
+
+  // Handle Excel export
+  
+
+
+  // Comprehensive Export with ALL details and timestamps
+  
+
+  // Comprehensive Export with REAL data from database
   const handleExport = async () => {
     try {
-      // Fetch all borrowers data
-      const allBorrowers = await fetchApi('/users/?role=borrower');
-      const allLoans = await fetchApi('/loans/');
+      setExporting(true);
       
-      // Prepare data for export
-      const exportData = allBorrowers.map((borrower: any) => {
-        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+      // Fetch ALL data from database
+      const [borrowersData, loansData, transactionsData, customersData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/'),
+        fetchApi('/loans/transactions'),
+        fetchApi('/customers/')
+      ]);
+      
+      // Prepare comprehensive export data with REAL values
+      const exportData = borrowersData.map((borrower: any) => {
+        const customer = customersData.find((c: any) => c.user_id === borrower.id);
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const borrowerTransactions = transactionsData.filter((t: any) => 
+          borrowerLoans.some((l: any) => l.id === t.loan_id)
+        );
+        
+        const activeLoan = borrowerLoans.find((l: any) => l.status === 'active' || l.status === 'disbursed');
         const totalLoans = borrowerLoans.length;
-        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
-        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
-        const outstanding = totalAmount - totalPaid;
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        
+        const latestTransaction = borrowerTransactions.length > 0 
+          ? borrowerTransactions.reduce((a: any, b: any) => new Date(a.created_at) > new Date(b.created_at) ? a : b)
+          : null;
+        
+        const unpaidLoans = borrowerLoans.filter((l: any) => 
+          l.status === 'active' || l.status === 'disbursed' || l.status === 'pending'
+        );
+        
+        const paymentMethods = [...new Set(borrowerTransactions.map((t: any) => t.payment_method || ''))];
+        
+        let creditScore = customer?.credit_score || 0;
+        if (!creditScore && customer) {
+          const onTimePayments = borrowerLoans.filter((l: any) => 
+            l.status === 'cleared' && l.total_paid >= l.principal_amount
+          ).length;
+          const totalLoansCount = borrowerLoans.length;
+          const repaymentRate = totalLoansCount > 0 ? (onTimePayments / totalLoansCount) * 100 : 0;
+          
+          if (repaymentRate >= 90) creditScore = 750;
+          else if (repaymentRate >= 70) creditScore = 650;
+          else if (repaymentRate >= 50) creditScore = 550;
+          else if (repaymentRate >= 30) creditScore = 450;
+          else if (repaymentRate > 0) creditScore = 350;
+          else creditScore = 300;
+        }
+        
+        const formatDate = (date: string) => {
+          if (!date) return '';
+          try {
+            return new Date(date).toLocaleString('en-KE', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+              timeZone: 'Africa/Nairobi'
+            });
+          } catch {
+            return '';
+          }
+        };
         
         return {
-          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
-          'Full Name': borrower.full_name || 'N/A',
-          'Email': borrower.email || 'N/A',
-          'Phone': borrower.phone_number || 'N/A',
-          'Status': borrower.is_active ? 'Active' : 'Inactive',
-          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
-          'Total Loans': totalLoans,
-          'Total Borrowed (KES)': totalAmount.toLocaleString(),
-          'Total Paid (KES)': totalPaid.toLocaleString(),
-          'Outstanding (KES)': outstanding.toLocaleString(),
-          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
-          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+          'Customer Code': customer?.customer_code || '',
+          'Full Name': borrower.full_name || '',
+          'Email': borrower.email || '',
+          'Phone Number': borrower.phone_number || '',
+          'National ID': customer?.national_id || '',
+          'KRA PIN': customer?.kra_pin || '',
+          'Date of Birth': customer?.date_of_birth || '',
+          'Gender': customer?.gender || '',
+          'Account Status': borrower.is_active ? 'Active' : 'Inactive',
+          'KYC Status': customer?.kyc_status || 'Pending',
+          'Credit Score': creditScore || 0,
+          'Max Loan Limit (KES)': customer?.max_loan_limit?.toLocaleString() || '0',
+          'Total Loans Applied': totalLoans || 0,
+          'Total Borrowed (KES)': totalBorrowed.toLocaleString() || '0',
+          'Total Paid (KES)': totalPaid.toLocaleString() || '0',
+          'Total Outstanding (KES)': totalOutstanding.toLocaleString() || '0',
+          'Current Active Loan': activeLoan ? activeLoan.application_no || '' : '',
+          'Current Loan Status': activeLoan ? activeLoan.status : '',
+          'Current Loan Amount (KES)': activeLoan ? activeLoan.principal_amount?.toLocaleString() : '0',
+          'Current Loan Outstanding (KES)': activeLoan ? activeLoan.outstanding_balance?.toLocaleString() : '0',
+          'Current Loan Due Date': activeLoan ? formatDate(activeLoan.due_date) : '',
+          'Current Loan Disbursement Date': activeLoan ? formatDate(activeLoan.disbursed_at) : '',
+          'Unpaid Loans Count': unpaidLoans.length || 0,
+          'Unpaid Loans Amount (KES)': unpaidLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0).toLocaleString() || '0',
+          'Payment Methods Used': paymentMethods.length ? paymentMethods.join(', ') : '',
+          'Latest Transaction Date': latestTransaction ? formatDate(latestTransaction.created_at) : '',
+          'Latest Transaction Amount (KES)': latestTransaction ? latestTransaction.amount?.toLocaleString() : '0',
+          'Latest Transaction Type': latestTransaction ? latestTransaction.type : '',
+          'Latest Transaction Reference': latestTransaction ? latestTransaction.reference_code : '',
+          'Total Transactions': borrowerTransactions.length || 0,
+          'Blacklisted': customer?.blacklisted ? 'Yes' : 'No',
+          'Branch': borrower.branch?.name || '',
+          'Date Created': formatDate(borrower.created_at),
+          'Date Last Updated': formatDate(borrower.updated_at || borrower.created_at),
+          'Loan Application Dates': borrowerLoans.map((l: any) => formatDate(l.created_at)).filter(Boolean).join('; '),
+          'Loan Disbursement Dates': borrowerLoans.filter((l: any) => l.disbursed_at).map((l: any) => formatDate(l.disbursed_at)).filter(Boolean).join('; '),
+          'Loan Due Dates': borrowerLoans.filter((l: any) => l.due_date).map((l: any) => formatDate(l.due_date)).filter(Boolean).join('; ')
         };
       });
       
-      // Create CSV content
       if (exportData.length === 0) {
         alert('No data to export');
+        setExporting(false);
         return;
       }
       
       const headers = Object.keys(exportData[0]);
       const csvRows = [];
-      
-      // Add header row
+      const BOM = '\uFEFF';
       csvRows.push(headers.join(','));
       
-      // Add data rows
       for (const row of exportData) {
         const values = headers.map(header => {
-          const val = row[header] || '';
-          return \`"\${String(val).replace(/"/g, '""')}"\`;
+          let val = row[header] || '';
+          val = String(val);
+          val = val.replace(/"/g, '""');
+          return '"' + val + '"';
         });
         csvRows.push(values.join(','));
       }
       
-      const csvString = csvRows.join('
-');
-      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const csvString = BOM + csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = 'Borrowers_Full_Export_' + timestamp + '.csv';
       link.click();
       URL.revokeObjectURL(link.href);
       
+      setExporting(false);
+      alert('Export completed successfully!');
+      
     } catch (error) {
       console.error('Export error:', error);
-      alert('Error exporting data. Please try again.');
+      setExporting(false);
+      alert('Error exporting data: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -632,69 +782,165 @@ export default function BorrowersPage() {
   if (error) {
   
   // Handle Excel export
+  
+
+
+  // Handle Excel export
+  
+
+
+  // Comprehensive Export with ALL details and timestamps
+  
+
+  // Comprehensive Export with REAL data from database
   const handleExport = async () => {
     try {
-      // Fetch all borrowers data
-      const allBorrowers = await fetchApi('/users/?role=borrower');
-      const allLoans = await fetchApi('/loans/');
+      setExporting(true);
       
-      // Prepare data for export
-      const exportData = allBorrowers.map((borrower: any) => {
-        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+      // Fetch ALL data from database
+      const [borrowersData, loansData, transactionsData, customersData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/'),
+        fetchApi('/loans/transactions'),
+        fetchApi('/customers/')
+      ]);
+      
+      // Prepare comprehensive export data with REAL values
+      const exportData = borrowersData.map((borrower: any) => {
+        const customer = customersData.find((c: any) => c.user_id === borrower.id);
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const borrowerTransactions = transactionsData.filter((t: any) => 
+          borrowerLoans.some((l: any) => l.id === t.loan_id)
+        );
+        
+        const activeLoan = borrowerLoans.find((l: any) => l.status === 'active' || l.status === 'disbursed');
         const totalLoans = borrowerLoans.length;
-        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
-        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
-        const outstanding = totalAmount - totalPaid;
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        
+        const latestTransaction = borrowerTransactions.length > 0 
+          ? borrowerTransactions.reduce((a: any, b: any) => new Date(a.created_at) > new Date(b.created_at) ? a : b)
+          : null;
+        
+        const unpaidLoans = borrowerLoans.filter((l: any) => 
+          l.status === 'active' || l.status === 'disbursed' || l.status === 'pending'
+        );
+        
+        const paymentMethods = [...new Set(borrowerTransactions.map((t: any) => t.payment_method || ''))];
+        
+        let creditScore = customer?.credit_score || 0;
+        if (!creditScore && customer) {
+          const onTimePayments = borrowerLoans.filter((l: any) => 
+            l.status === 'cleared' && l.total_paid >= l.principal_amount
+          ).length;
+          const totalLoansCount = borrowerLoans.length;
+          const repaymentRate = totalLoansCount > 0 ? (onTimePayments / totalLoansCount) * 100 : 0;
+          
+          if (repaymentRate >= 90) creditScore = 750;
+          else if (repaymentRate >= 70) creditScore = 650;
+          else if (repaymentRate >= 50) creditScore = 550;
+          else if (repaymentRate >= 30) creditScore = 450;
+          else if (repaymentRate > 0) creditScore = 350;
+          else creditScore = 300;
+        }
+        
+        const formatDate = (date: string) => {
+          if (!date) return '';
+          try {
+            return new Date(date).toLocaleString('en-KE', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+              timeZone: 'Africa/Nairobi'
+            });
+          } catch {
+            return '';
+          }
+        };
         
         return {
-          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
-          'Full Name': borrower.full_name || 'N/A',
-          'Email': borrower.email || 'N/A',
-          'Phone': borrower.phone_number || 'N/A',
-          'Status': borrower.is_active ? 'Active' : 'Inactive',
-          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
-          'Total Loans': totalLoans,
-          'Total Borrowed (KES)': totalAmount.toLocaleString(),
-          'Total Paid (KES)': totalPaid.toLocaleString(),
-          'Outstanding (KES)': outstanding.toLocaleString(),
-          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
-          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+          'Customer Code': customer?.customer_code || '',
+          'Full Name': borrower.full_name || '',
+          'Email': borrower.email || '',
+          'Phone Number': borrower.phone_number || '',
+          'National ID': customer?.national_id || '',
+          'KRA PIN': customer?.kra_pin || '',
+          'Date of Birth': customer?.date_of_birth || '',
+          'Gender': customer?.gender || '',
+          'Account Status': borrower.is_active ? 'Active' : 'Inactive',
+          'KYC Status': customer?.kyc_status || 'Pending',
+          'Credit Score': creditScore || 0,
+          'Max Loan Limit (KES)': customer?.max_loan_limit?.toLocaleString() || '0',
+          'Total Loans Applied': totalLoans || 0,
+          'Total Borrowed (KES)': totalBorrowed.toLocaleString() || '0',
+          'Total Paid (KES)': totalPaid.toLocaleString() || '0',
+          'Total Outstanding (KES)': totalOutstanding.toLocaleString() || '0',
+          'Current Active Loan': activeLoan ? activeLoan.application_no || '' : '',
+          'Current Loan Status': activeLoan ? activeLoan.status : '',
+          'Current Loan Amount (KES)': activeLoan ? activeLoan.principal_amount?.toLocaleString() : '0',
+          'Current Loan Outstanding (KES)': activeLoan ? activeLoan.outstanding_balance?.toLocaleString() : '0',
+          'Current Loan Due Date': activeLoan ? formatDate(activeLoan.due_date) : '',
+          'Current Loan Disbursement Date': activeLoan ? formatDate(activeLoan.disbursed_at) : '',
+          'Unpaid Loans Count': unpaidLoans.length || 0,
+          'Unpaid Loans Amount (KES)': unpaidLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0).toLocaleString() || '0',
+          'Payment Methods Used': paymentMethods.length ? paymentMethods.join(', ') : '',
+          'Latest Transaction Date': latestTransaction ? formatDate(latestTransaction.created_at) : '',
+          'Latest Transaction Amount (KES)': latestTransaction ? latestTransaction.amount?.toLocaleString() : '0',
+          'Latest Transaction Type': latestTransaction ? latestTransaction.type : '',
+          'Latest Transaction Reference': latestTransaction ? latestTransaction.reference_code : '',
+          'Total Transactions': borrowerTransactions.length || 0,
+          'Blacklisted': customer?.blacklisted ? 'Yes' : 'No',
+          'Branch': borrower.branch?.name || '',
+          'Date Created': formatDate(borrower.created_at),
+          'Date Last Updated': formatDate(borrower.updated_at || borrower.created_at),
+          'Loan Application Dates': borrowerLoans.map((l: any) => formatDate(l.created_at)).filter(Boolean).join('; '),
+          'Loan Disbursement Dates': borrowerLoans.filter((l: any) => l.disbursed_at).map((l: any) => formatDate(l.disbursed_at)).filter(Boolean).join('; '),
+          'Loan Due Dates': borrowerLoans.filter((l: any) => l.due_date).map((l: any) => formatDate(l.due_date)).filter(Boolean).join('; ')
         };
       });
       
-      // Create CSV content
       if (exportData.length === 0) {
         alert('No data to export');
+        setExporting(false);
         return;
       }
       
       const headers = Object.keys(exportData[0]);
       const csvRows = [];
-      
-      // Add header row
+      const BOM = '\uFEFF';
       csvRows.push(headers.join(','));
       
-      // Add data rows
       for (const row of exportData) {
         const values = headers.map(header => {
-          const val = row[header] || '';
-          return \`"\${String(val).replace(/"/g, '""')}"\`;
+          let val = row[header] || '';
+          val = String(val);
+          val = val.replace(/"/g, '""');
+          return '"' + val + '"';
         });
         csvRows.push(values.join(','));
       }
       
-      const csvString = csvRows.join('
-');
-      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const csvString = BOM + csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = 'Borrowers_Full_Export_' + timestamp + '.csv';
       link.click();
       URL.revokeObjectURL(link.href);
       
+      setExporting(false);
+      alert('Export completed successfully!');
+      
     } catch (error) {
       console.error('Export error:', error);
-      alert('Error exporting data. Please try again.');
+      setExporting(false);
+      alert('Error exporting data: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -710,69 +956,165 @@ export default function BorrowersPage() {
 
 
   // Handle Excel export
+  
+
+
+  // Handle Excel export
+  
+
+
+  // Comprehensive Export with ALL details and timestamps
+  
+
+  // Comprehensive Export with REAL data from database
   const handleExport = async () => {
     try {
-      // Fetch all borrowers data
-      const allBorrowers = await fetchApi('/users/?role=borrower');
-      const allLoans = await fetchApi('/loans/');
+      setExporting(true);
       
-      // Prepare data for export
-      const exportData = allBorrowers.map((borrower: any) => {
-        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+      // Fetch ALL data from database
+      const [borrowersData, loansData, transactionsData, customersData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/'),
+        fetchApi('/loans/transactions'),
+        fetchApi('/customers/')
+      ]);
+      
+      // Prepare comprehensive export data with REAL values
+      const exportData = borrowersData.map((borrower: any) => {
+        const customer = customersData.find((c: any) => c.user_id === borrower.id);
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const borrowerTransactions = transactionsData.filter((t: any) => 
+          borrowerLoans.some((l: any) => l.id === t.loan_id)
+        );
+        
+        const activeLoan = borrowerLoans.find((l: any) => l.status === 'active' || l.status === 'disbursed');
         const totalLoans = borrowerLoans.length;
-        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
-        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
-        const outstanding = totalAmount - totalPaid;
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        
+        const latestTransaction = borrowerTransactions.length > 0 
+          ? borrowerTransactions.reduce((a: any, b: any) => new Date(a.created_at) > new Date(b.created_at) ? a : b)
+          : null;
+        
+        const unpaidLoans = borrowerLoans.filter((l: any) => 
+          l.status === 'active' || l.status === 'disbursed' || l.status === 'pending'
+        );
+        
+        const paymentMethods = [...new Set(borrowerTransactions.map((t: any) => t.payment_method || ''))];
+        
+        let creditScore = customer?.credit_score || 0;
+        if (!creditScore && customer) {
+          const onTimePayments = borrowerLoans.filter((l: any) => 
+            l.status === 'cleared' && l.total_paid >= l.principal_amount
+          ).length;
+          const totalLoansCount = borrowerLoans.length;
+          const repaymentRate = totalLoansCount > 0 ? (onTimePayments / totalLoansCount) * 100 : 0;
+          
+          if (repaymentRate >= 90) creditScore = 750;
+          else if (repaymentRate >= 70) creditScore = 650;
+          else if (repaymentRate >= 50) creditScore = 550;
+          else if (repaymentRate >= 30) creditScore = 450;
+          else if (repaymentRate > 0) creditScore = 350;
+          else creditScore = 300;
+        }
+        
+        const formatDate = (date: string) => {
+          if (!date) return '';
+          try {
+            return new Date(date).toLocaleString('en-KE', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+              timeZone: 'Africa/Nairobi'
+            });
+          } catch {
+            return '';
+          }
+        };
         
         return {
-          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
-          'Full Name': borrower.full_name || 'N/A',
-          'Email': borrower.email || 'N/A',
-          'Phone': borrower.phone_number || 'N/A',
-          'Status': borrower.is_active ? 'Active' : 'Inactive',
-          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
-          'Total Loans': totalLoans,
-          'Total Borrowed (KES)': totalAmount.toLocaleString(),
-          'Total Paid (KES)': totalPaid.toLocaleString(),
-          'Outstanding (KES)': outstanding.toLocaleString(),
-          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
-          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+          'Customer Code': customer?.customer_code || '',
+          'Full Name': borrower.full_name || '',
+          'Email': borrower.email || '',
+          'Phone Number': borrower.phone_number || '',
+          'National ID': customer?.national_id || '',
+          'KRA PIN': customer?.kra_pin || '',
+          'Date of Birth': customer?.date_of_birth || '',
+          'Gender': customer?.gender || '',
+          'Account Status': borrower.is_active ? 'Active' : 'Inactive',
+          'KYC Status': customer?.kyc_status || 'Pending',
+          'Credit Score': creditScore || 0,
+          'Max Loan Limit (KES)': customer?.max_loan_limit?.toLocaleString() || '0',
+          'Total Loans Applied': totalLoans || 0,
+          'Total Borrowed (KES)': totalBorrowed.toLocaleString() || '0',
+          'Total Paid (KES)': totalPaid.toLocaleString() || '0',
+          'Total Outstanding (KES)': totalOutstanding.toLocaleString() || '0',
+          'Current Active Loan': activeLoan ? activeLoan.application_no || '' : '',
+          'Current Loan Status': activeLoan ? activeLoan.status : '',
+          'Current Loan Amount (KES)': activeLoan ? activeLoan.principal_amount?.toLocaleString() : '0',
+          'Current Loan Outstanding (KES)': activeLoan ? activeLoan.outstanding_balance?.toLocaleString() : '0',
+          'Current Loan Due Date': activeLoan ? formatDate(activeLoan.due_date) : '',
+          'Current Loan Disbursement Date': activeLoan ? formatDate(activeLoan.disbursed_at) : '',
+          'Unpaid Loans Count': unpaidLoans.length || 0,
+          'Unpaid Loans Amount (KES)': unpaidLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0).toLocaleString() || '0',
+          'Payment Methods Used': paymentMethods.length ? paymentMethods.join(', ') : '',
+          'Latest Transaction Date': latestTransaction ? formatDate(latestTransaction.created_at) : '',
+          'Latest Transaction Amount (KES)': latestTransaction ? latestTransaction.amount?.toLocaleString() : '0',
+          'Latest Transaction Type': latestTransaction ? latestTransaction.type : '',
+          'Latest Transaction Reference': latestTransaction ? latestTransaction.reference_code : '',
+          'Total Transactions': borrowerTransactions.length || 0,
+          'Blacklisted': customer?.blacklisted ? 'Yes' : 'No',
+          'Branch': borrower.branch?.name || '',
+          'Date Created': formatDate(borrower.created_at),
+          'Date Last Updated': formatDate(borrower.updated_at || borrower.created_at),
+          'Loan Application Dates': borrowerLoans.map((l: any) => formatDate(l.created_at)).filter(Boolean).join('; '),
+          'Loan Disbursement Dates': borrowerLoans.filter((l: any) => l.disbursed_at).map((l: any) => formatDate(l.disbursed_at)).filter(Boolean).join('; '),
+          'Loan Due Dates': borrowerLoans.filter((l: any) => l.due_date).map((l: any) => formatDate(l.due_date)).filter(Boolean).join('; ')
         };
       });
       
-      // Create CSV content
       if (exportData.length === 0) {
         alert('No data to export');
+        setExporting(false);
         return;
       }
       
       const headers = Object.keys(exportData[0]);
       const csvRows = [];
-      
-      // Add header row
+      const BOM = '\uFEFF';
       csvRows.push(headers.join(','));
       
-      // Add data rows
       for (const row of exportData) {
         const values = headers.map(header => {
-          const val = row[header] || '';
-          return \`"\${String(val).replace(/"/g, '""')}"\`;
+          let val = row[header] || '';
+          val = String(val);
+          val = val.replace(/"/g, '""');
+          return '"' + val + '"';
         });
         csvRows.push(values.join(','));
       }
       
-      const csvString = csvRows.join('
-');
-      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const csvString = BOM + csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = 'Borrowers_Full_Export_' + timestamp + '.csv';
       link.click();
       URL.revokeObjectURL(link.href);
       
+      setExporting(false);
+      alert('Export completed successfully!');
+      
     } catch (error) {
       console.error('Export error:', error);
-      alert('Error exporting data. Please try again.');
+      setExporting(false);
+      alert('Error exporting data: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -787,8 +1129,9 @@ export default function BorrowersPage() {
         <div className="flex flex-wrap gap-3 items-center">
           <button
             type="button"
-            onClick={exportAllBorrowersExcel}
-            disabled={exportingExcel}
+            onClick={handleExport}
+                disabled={exporting || exportingExcel}
+            disabled={exporting || exportingExcel}
             className="border border-black bg-white text-black px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-colors disabled:opacity-50"
           >
             {exportingExcel ? 'EXPORTING EXCEL SHEET...' : 'EXPORT EXCEL SHEET'}
@@ -803,6 +1146,7 @@ export default function BorrowersPage() {
             Onboard Borrower
               <button
                 onClick={handleExport}
+                disabled={exporting || exportingExcel}
                 className="border border-black bg-white text-black px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-black hover:text-white transition-colors"
                 style={{ fontFamily: "monospace" }}
               >
@@ -868,69 +1212,165 @@ export default function BorrowersPage() {
                   const currentLoan = rowLoans.find((l) => l.status === 'disbursed' || l.status === 'active');
                 
   // Handle Excel export
+  
+
+
+  // Handle Excel export
+  
+
+
+  // Comprehensive Export with ALL details and timestamps
+  
+
+  // Comprehensive Export with REAL data from database
   const handleExport = async () => {
     try {
-      // Fetch all borrowers data
-      const allBorrowers = await fetchApi('/users/?role=borrower');
-      const allLoans = await fetchApi('/loans/');
+      setExporting(true);
       
-      // Prepare data for export
-      const exportData = allBorrowers.map((borrower: any) => {
-        const borrowerLoans = allLoans.filter((loan: any) => loan.user_id === borrower.id);
+      // Fetch ALL data from database
+      const [borrowersData, loansData, transactionsData, customersData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/'),
+        fetchApi('/loans/transactions'),
+        fetchApi('/customers/')
+      ]);
+      
+      // Prepare comprehensive export data with REAL values
+      const exportData = borrowersData.map((borrower: any) => {
+        const customer = customersData.find((c: any) => c.user_id === borrower.id);
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const borrowerTransactions = transactionsData.filter((t: any) => 
+          borrowerLoans.some((l: any) => l.id === t.loan_id)
+        );
+        
+        const activeLoan = borrowerLoans.find((l: any) => l.status === 'active' || l.status === 'disbursed');
         const totalLoans = borrowerLoans.length;
-        const totalAmount = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.principal_amount || 0), 0);
-        const totalPaid = borrowerLoans.reduce((sum: number, loan: any) => sum + (loan.total_paid || 0), 0);
-        const outstanding = totalAmount - totalPaid;
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        
+        const latestTransaction = borrowerTransactions.length > 0 
+          ? borrowerTransactions.reduce((a: any, b: any) => new Date(a.created_at) > new Date(b.created_at) ? a : b)
+          : null;
+        
+        const unpaidLoans = borrowerLoans.filter((l: any) => 
+          l.status === 'active' || l.status === 'disbursed' || l.status === 'pending'
+        );
+        
+        const paymentMethods = [...new Set(borrowerTransactions.map((t: any) => t.payment_method || ''))];
+        
+        let creditScore = customer?.credit_score || 0;
+        if (!creditScore && customer) {
+          const onTimePayments = borrowerLoans.filter((l: any) => 
+            l.status === 'cleared' && l.total_paid >= l.principal_amount
+          ).length;
+          const totalLoansCount = borrowerLoans.length;
+          const repaymentRate = totalLoansCount > 0 ? (onTimePayments / totalLoansCount) * 100 : 0;
+          
+          if (repaymentRate >= 90) creditScore = 750;
+          else if (repaymentRate >= 70) creditScore = 650;
+          else if (repaymentRate >= 50) creditScore = 550;
+          else if (repaymentRate >= 30) creditScore = 450;
+          else if (repaymentRate > 0) creditScore = 350;
+          else creditScore = 300;
+        }
+        
+        const formatDate = (date: string) => {
+          if (!date) return '';
+          try {
+            return new Date(date).toLocaleString('en-KE', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+              timeZone: 'Africa/Nairobi'
+            });
+          } catch {
+            return '';
+          }
+        };
         
         return {
-          'Customer Code': borrower.customer_profile?.customer_code || 'N/A',
-          'Full Name': borrower.full_name || 'N/A',
-          'Email': borrower.email || 'N/A',
-          'Phone': borrower.phone_number || 'N/A',
-          'Status': borrower.is_active ? 'Active' : 'Inactive',
-          'Credit Score': borrower.customer_profile?.credit_score || 'N/A',
-          'Total Loans': totalLoans,
-          'Total Borrowed (KES)': totalAmount.toLocaleString(),
-          'Total Paid (KES)': totalPaid.toLocaleString(),
-          'Outstanding (KES)': outstanding.toLocaleString(),
-          'KYC Status': borrower.customer_profile?.kyc_status || 'Pending',
-          'Max Limit (KES)': borrower.customer_profile?.max_loan_limit?.toLocaleString() || 'N/A'
+          'Customer Code': customer?.customer_code || '',
+          'Full Name': borrower.full_name || '',
+          'Email': borrower.email || '',
+          'Phone Number': borrower.phone_number || '',
+          'National ID': customer?.national_id || '',
+          'KRA PIN': customer?.kra_pin || '',
+          'Date of Birth': customer?.date_of_birth || '',
+          'Gender': customer?.gender || '',
+          'Account Status': borrower.is_active ? 'Active' : 'Inactive',
+          'KYC Status': customer?.kyc_status || 'Pending',
+          'Credit Score': creditScore || 0,
+          'Max Loan Limit (KES)': customer?.max_loan_limit?.toLocaleString() || '0',
+          'Total Loans Applied': totalLoans || 0,
+          'Total Borrowed (KES)': totalBorrowed.toLocaleString() || '0',
+          'Total Paid (KES)': totalPaid.toLocaleString() || '0',
+          'Total Outstanding (KES)': totalOutstanding.toLocaleString() || '0',
+          'Current Active Loan': activeLoan ? activeLoan.application_no || '' : '',
+          'Current Loan Status': activeLoan ? activeLoan.status : '',
+          'Current Loan Amount (KES)': activeLoan ? activeLoan.principal_amount?.toLocaleString() : '0',
+          'Current Loan Outstanding (KES)': activeLoan ? activeLoan.outstanding_balance?.toLocaleString() : '0',
+          'Current Loan Due Date': activeLoan ? formatDate(activeLoan.due_date) : '',
+          'Current Loan Disbursement Date': activeLoan ? formatDate(activeLoan.disbursed_at) : '',
+          'Unpaid Loans Count': unpaidLoans.length || 0,
+          'Unpaid Loans Amount (KES)': unpaidLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0).toLocaleString() || '0',
+          'Payment Methods Used': paymentMethods.length ? paymentMethods.join(', ') : '',
+          'Latest Transaction Date': latestTransaction ? formatDate(latestTransaction.created_at) : '',
+          'Latest Transaction Amount (KES)': latestTransaction ? latestTransaction.amount?.toLocaleString() : '0',
+          'Latest Transaction Type': latestTransaction ? latestTransaction.type : '',
+          'Latest Transaction Reference': latestTransaction ? latestTransaction.reference_code : '',
+          'Total Transactions': borrowerTransactions.length || 0,
+          'Blacklisted': customer?.blacklisted ? 'Yes' : 'No',
+          'Branch': borrower.branch?.name || '',
+          'Date Created': formatDate(borrower.created_at),
+          'Date Last Updated': formatDate(borrower.updated_at || borrower.created_at),
+          'Loan Application Dates': borrowerLoans.map((l: any) => formatDate(l.created_at)).filter(Boolean).join('; '),
+          'Loan Disbursement Dates': borrowerLoans.filter((l: any) => l.disbursed_at).map((l: any) => formatDate(l.disbursed_at)).filter(Boolean).join('; '),
+          'Loan Due Dates': borrowerLoans.filter((l: any) => l.due_date).map((l: any) => formatDate(l.due_date)).filter(Boolean).join('; ')
         };
       });
       
-      // Create CSV content
       if (exportData.length === 0) {
         alert('No data to export');
+        setExporting(false);
         return;
       }
       
       const headers = Object.keys(exportData[0]);
       const csvRows = [];
-      
-      // Add header row
+      const BOM = '\uFEFF';
       csvRows.push(headers.join(','));
       
-      // Add data rows
       for (const row of exportData) {
         const values = headers.map(header => {
-          const val = row[header] || '';
-          return \`"\${String(val).replace(/"/g, '""')}"\`;
+          let val = row[header] || '';
+          val = String(val);
+          val = val.replace(/"/g, '""');
+          return '"' + val + '"';
         });
         csvRows.push(values.join(','));
       }
       
-      const csvString = csvRows.join('
-');
-      const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+      const csvString = BOM + csvRows.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = \`Borrowers_Export_\${new Date().toISOString().split('T')[0]}.csv\`;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = 'Borrowers_Full_Export_' + timestamp + '.csv';
       link.click();
       URL.revokeObjectURL(link.href);
       
+      setExporting(false);
+      alert('Export completed successfully!');
+      
     } catch (error) {
       console.error('Export error:', error);
-      alert('Error exporting data. Please try again.');
+      setExporting(false);
+      alert('Error exporting data: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
