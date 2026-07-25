@@ -75,7 +75,7 @@ export default function LoansPage() {
     return (
       <div className="border border-black bg-white p-8">
         <div className="flex items-center gap-3 text-black font-mono text-xs uppercase tracking-wider">
-          <span>⚠️</span>
+          <span></span>
           <span>{error}</span>
         </div>
       </div>

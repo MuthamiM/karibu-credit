@@ -383,7 +383,7 @@ export default function CustomerPortalPage() {
             </div>
 
             <div className="bg-zinc-50 border border-black p-3 text-[10px] font-mono text-zinc-500 uppercase tracking-wider leading-relaxed">
-              💡 In simulation: clicking "Pay Now" fires a mock M-Pesa STK Push. In production, this prompts the user device.
+               In simulation: clicking "Pay Now" fires a mock M-Pesa STK Push. In production, this prompts the user device.
             </div>
 
             <div className="flex gap-2 pt-2 border-t border-black/10">

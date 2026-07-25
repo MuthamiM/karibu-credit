@@ -373,7 +373,7 @@ export default function AmortizationPage() {
                   zIndex: 2,
                 }}
               >
-                📋 Amortization Schedule
+                 Amortization Schedule
               </button>
               <button
                 type="button"
@@ -392,7 +392,7 @@ export default function AmortizationPage() {
                   zIndex: 2,
                 }}
               >
-                📊 Yield Sensitivity Spread
+                 Yield Sensitivity Spread
               </button>
             </div>
 

@@ -53,7 +53,7 @@ export default function OnboardBorrowerPage() {
         
         {error && (
           <div className="mb-5 border border-black bg-black text-white px-4 py-3 text-xs font-mono uppercase tracking-wider flex items-center gap-2">
-            <span>⚠️</span>
+            <span></span>
             <span>{error}</span>
           </div>
         )}

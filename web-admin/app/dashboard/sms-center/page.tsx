@@ -285,7 +285,7 @@ export default function SMSCenterPage() {
                   className={THEME.classes.btnPrimary}
                   style={{ width: '100%', marginTop: '0.25rem' }}
                 >
-                  {isSending ? 'Sending via Termux Gateway...' : '📱 Dispatch SMS via Termux'}
+                  {isSending ? 'Sending via Termux Gateway...' : ' Dispatch SMS via Termux'}
                 </button>
               </form>
             )}

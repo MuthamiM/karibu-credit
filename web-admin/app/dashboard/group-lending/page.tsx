@@ -561,7 +561,7 @@ export default function GroupLendingPage() {
                     {simulationResult && (
                       <div style={{ marginTop: 8, padding: '8px', border: '1px solid #ef4444', background: '#fee2e2', color: '#000', fontSize: '10px' }}>
                         <div style={{ fontWeight: 'bold', color: '#b91c1c', marginBottom: 4, textTransform: 'uppercase' }}>
-                          ⚠️ LIABILITY CLAIMS REDISTRIBUTED:
+                           LIABILITY CLAIMS REDISTRIBUTED:
                         </div>
                         <p style={{ margin: '0 0 6px 0', textTransform: 'none', lineHeight: 1.3 }}>
                           <strong>{simulationResult.defaultingMemberName}</strong> default of <strong>KES {simulationResult.totalDefault.toLocaleString()}</strong> has been claimed proportionally from co-signers:

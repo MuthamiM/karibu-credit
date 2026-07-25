@@ -228,7 +228,7 @@ export default function CRBCheckPage() {
                 required
               />
             </div>
-            {error && <div style={{ fontSize: '10px', color: '#b91c1c', fontFamily: 'monospace' }}>⚠️ {error}</div>}
+            {error && <div style={{ fontSize: '10px', color: '#b91c1c', fontFamily: 'monospace' }}> {error}</div>}
             <button
               type="submit"
               disabled={crbLoading}
@@ -320,7 +320,7 @@ export default function CRBCheckPage() {
               
               {!crbResult ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '240px', color: '#71717a', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '2rem' }}>📊</span>
+                  <span style={{ fontSize: '2rem' }}></span>
                   <p className={THEME.classes.textMuted} style={{ textTransform: 'none' }}>Perform a CRB Query first to run underwriting calculations.</p>
                 </div>
               ) : (

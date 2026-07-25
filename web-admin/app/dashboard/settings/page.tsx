@@ -148,7 +148,7 @@ export default function AccountSettingsPage() {
             fontFamily: 'monospace', marginBottom: '0.5rem', borderBottom: '1px solid #000',
             paddingBottom: '0.5rem'
           }}>
-            📱 2FA OTP Phone Target
+             2FA OTP Phone Target
           </h2>
           <p style={{ fontSize: '11px', color: THEME.colors.textMuted, marginBottom: '1.25rem', lineHeight: 1.4 }}>
             Update the phone number used to receive 2FA SMS security codes when logging into your role account.
@@ -206,7 +206,7 @@ export default function AccountSettingsPage() {
             fontFamily: 'monospace', marginBottom: '0.5rem', borderBottom: '1px solid #000',
             paddingBottom: '0.5rem'
           }}>
-            🔒 Security Password Tool
+             Security Password Tool
           </h2>
           <p style={{ fontSize: '11px', color: THEME.colors.textMuted, marginBottom: '1.25rem', lineHeight: 1.4 }}>
             Change your account password for security. Requires your current password for authorization.
