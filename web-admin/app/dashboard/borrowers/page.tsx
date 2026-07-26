@@ -63,6 +63,10 @@ type Loan = {
 
 export default function BorrowersPage() {
   const [borrowers, setBorrowers] = useState<Borrower[]>([]);
+  const [displayedBorrowers, setDisplayedBorrowers] = useState<Borrower[]>([]);
+  const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [selectedBorrowerId, setSelectedBorrowerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,6 +80,7 @@ export default function BorrowersPage() {
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportStatus, setExportStatus] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [exportingWord, setExportingWord] = useState(false);
 
   // Load borrowers and loans concurrently
   useEffect(() => {
@@ -86,6 +91,11 @@ export default function BorrowersPage() {
           fetchApi('/loans/')
         ]);
         setBorrowers(borrowersData);
+        // Only show first 20 on mobile
+        const isMobile = window.innerWidth < 768;
+        const initialItems = isMobile ? 10 : 20;
+        setDisplayedBorrowers(borrowersData.slice(0, initialItems));
+        setTotalPages(Math.ceil(borrowersData.length / itemsPerPage));
         setLoans(loansData);
         if (borrowersData.length > 0) {
           setSelectedBorrowerId(borrowersData[0].id);
@@ -439,6 +449,121 @@ export default function BorrowersPage() {
     }
   };
 
+
+  // Word Document Export
+  const handleWordExport = async () => {
+    try {
+      setExportingWord(true);
+      
+      const [borrowersData, loansData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/')
+      ]);
+      
+      // Build HTML for Word document
+      let html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Borrowers Report</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; }
+          table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 11px; }
+          th { background: #000; color: #fff; padding: 10px; text-align: left; border: 1px solid #000; }
+          td { padding: 8px; border: 1px solid #ccc; }
+          tr:nth-child(even) { background: #f9f9f9; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .header p { color: #666; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ccc; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Borrowers Report</h1>
+          <p>Generated: ${new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
+          <p>Total Borrowers: ${borrowersData.length}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer Code</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>KYC</th>
+              <th>Credit Score</th>
+              <th>Total Loans</th>
+              <th>Total Borrowed</th>
+              <th>Total Paid</th>
+              <th>Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      
+      borrowersData.forEach((borrower: any, index: number) => {
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        const customer = borrower.customer_profile || {};
+        
+        html += `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${customer?.customer_code || ''}</td>
+              <td>${borrower.full_name || ''}</td>
+              <td>${borrower.email || ''}</td>
+              <td>${borrower.phone_number || ''}</td>
+              <td>${borrower.is_active ? 'Active' : 'Inactive'}</td>
+              <td>${customer?.kyc_status || 'Pending'}</td>
+              <td>${customer?.credit_score || 'N/A'}</td>
+              <td>${borrowerLoans.length}</td>
+              <td>KES ${totalBorrowed.toLocaleString()}</td>
+              <td>KES ${totalPaid.toLocaleString()}</td>
+              <td>KES ${totalOutstanding.toLocaleString()}</td>
+            </tr>`;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Report generated from Karibu Credit System</p>
+          <p>All data is confidential and for internal use only</p>
+        </div>
+      </body>
+      </html>`;
+      
+      const blob = new Blob([html], { type: 'application/msword' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `Borrowers_Report_${timestamp}.doc`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+      setExportingWord(false);
+      
+    } catch (error) {
+      console.error('Word export error:', error);
+      setExportingWord(false);
+      alert('Error exporting Word document: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   return (
         b.full_name.toLowerCase().includes(q) ||
         b.email.toLowerCase().includes(q) ||
@@ -771,11 +896,126 @@ export default function BorrowersPage() {
     }
   };
 
+
+  // Word Document Export
+  const handleWordExport = async () => {
+    try {
+      setExportingWord(true);
+      
+      const [borrowersData, loansData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/')
+      ]);
+      
+      // Build HTML for Word document
+      let html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Borrowers Report</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; }
+          table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 11px; }
+          th { background: #000; color: #fff; padding: 10px; text-align: left; border: 1px solid #000; }
+          td { padding: 8px; border: 1px solid #ccc; }
+          tr:nth-child(even) { background: #f9f9f9; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .header p { color: #666; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ccc; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Borrowers Report</h1>
+          <p>Generated: ${new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
+          <p>Total Borrowers: ${borrowersData.length}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer Code</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>KYC</th>
+              <th>Credit Score</th>
+              <th>Total Loans</th>
+              <th>Total Borrowed</th>
+              <th>Total Paid</th>
+              <th>Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      
+      borrowersData.forEach((borrower: any, index: number) => {
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        const customer = borrower.customer_profile || {};
+        
+        html += `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${customer?.customer_code || ''}</td>
+              <td>${borrower.full_name || ''}</td>
+              <td>${borrower.email || ''}</td>
+              <td>${borrower.phone_number || ''}</td>
+              <td>${borrower.is_active ? 'Active' : 'Inactive'}</td>
+              <td>${customer?.kyc_status || 'Pending'}</td>
+              <td>${customer?.credit_score || 'N/A'}</td>
+              <td>${borrowerLoans.length}</td>
+              <td>KES ${totalBorrowed.toLocaleString()}</td>
+              <td>KES ${totalPaid.toLocaleString()}</td>
+              <td>KES ${totalOutstanding.toLocaleString()}</td>
+            </tr>`;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Report generated from Karibu Credit System</p>
+          <p>All data is confidential and for internal use only</p>
+        </div>
+      </body>
+      </html>`;
+      
+      const blob = new Blob([html], { type: 'application/msword' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `Borrowers_Report_${timestamp}.doc`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+      setExportingWord(false);
+      
+    } catch (error) {
+      console.error('Word export error:', error);
+      setExportingWord(false);
+      alert('Error exporting Word document: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   return (
       <div className="min-h-[500px] flex items-center justify-center bg-white border border-black p-8 text-black gap-3 font-mono">
         <span className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
         LOADING DASHBOARD...
-      </div>
+</div>
     );
   }
 
@@ -944,13 +1184,128 @@ export default function BorrowersPage() {
     }
   };
 
+
+  // Word Document Export
+  const handleWordExport = async () => {
+    try {
+      setExportingWord(true);
+      
+      const [borrowersData, loansData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/')
+      ]);
+      
+      // Build HTML for Word document
+      let html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Borrowers Report</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; }
+          table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 11px; }
+          th { background: #000; color: #fff; padding: 10px; text-align: left; border: 1px solid #000; }
+          td { padding: 8px; border: 1px solid #ccc; }
+          tr:nth-child(even) { background: #f9f9f9; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .header p { color: #666; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ccc; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Borrowers Report</h1>
+          <p>Generated: ${new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
+          <p>Total Borrowers: ${borrowersData.length}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer Code</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>KYC</th>
+              <th>Credit Score</th>
+              <th>Total Loans</th>
+              <th>Total Borrowed</th>
+              <th>Total Paid</th>
+              <th>Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      
+      borrowersData.forEach((borrower: any, index: number) => {
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        const customer = borrower.customer_profile || {};
+        
+        html += `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${customer?.customer_code || ''}</td>
+              <td>${borrower.full_name || ''}</td>
+              <td>${borrower.email || ''}</td>
+              <td>${borrower.phone_number || ''}</td>
+              <td>${borrower.is_active ? 'Active' : 'Inactive'}</td>
+              <td>${customer?.kyc_status || 'Pending'}</td>
+              <td>${customer?.credit_score || 'N/A'}</td>
+              <td>${borrowerLoans.length}</td>
+              <td>KES ${totalBorrowed.toLocaleString()}</td>
+              <td>KES ${totalPaid.toLocaleString()}</td>
+              <td>KES ${totalOutstanding.toLocaleString()}</td>
+            </tr>`;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Report generated from Karibu Credit System</p>
+          <p>All data is confidential and for internal use only</p>
+        </div>
+      </body>
+      </html>`;
+      
+      const blob = new Blob([html], { type: 'application/msword' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `Borrowers_Report_${timestamp}.doc`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+      setExportingWord(false);
+      
+    } catch (error) {
+      console.error('Word export error:', error);
+      setExportingWord(false);
+      alert('Error exporting Word document: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   return (
       <div className="bg-white border border-black p-8 text-black font-mono">
         <div className="flex items-center gap-3">
           <span></span>
           <span>{error}</span>
-        </div>
-      </div>
+</div>
+</div>
     );
   }
 
@@ -1118,6 +1473,121 @@ export default function BorrowersPage() {
     }
   };
 
+
+  // Word Document Export
+  const handleWordExport = async () => {
+    try {
+      setExportingWord(true);
+      
+      const [borrowersData, loansData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/')
+      ]);
+      
+      // Build HTML for Word document
+      let html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Borrowers Report</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; }
+          table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 11px; }
+          th { background: #000; color: #fff; padding: 10px; text-align: left; border: 1px solid #000; }
+          td { padding: 8px; border: 1px solid #ccc; }
+          tr:nth-child(even) { background: #f9f9f9; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .header p { color: #666; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ccc; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Borrowers Report</h1>
+          <p>Generated: ${new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
+          <p>Total Borrowers: ${borrowersData.length}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer Code</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>KYC</th>
+              <th>Credit Score</th>
+              <th>Total Loans</th>
+              <th>Total Borrowed</th>
+              <th>Total Paid</th>
+              <th>Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      
+      borrowersData.forEach((borrower: any, index: number) => {
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        const customer = borrower.customer_profile || {};
+        
+        html += `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${customer?.customer_code || ''}</td>
+              <td>${borrower.full_name || ''}</td>
+              <td>${borrower.email || ''}</td>
+              <td>${borrower.phone_number || ''}</td>
+              <td>${borrower.is_active ? 'Active' : 'Inactive'}</td>
+              <td>${customer?.kyc_status || 'Pending'}</td>
+              <td>${customer?.credit_score || 'N/A'}</td>
+              <td>${borrowerLoans.length}</td>
+              <td>KES ${totalBorrowed.toLocaleString()}</td>
+              <td>KES ${totalPaid.toLocaleString()}</td>
+              <td>KES ${totalOutstanding.toLocaleString()}</td>
+            </tr>`;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Report generated from Karibu Credit System</p>
+          <p>All data is confidential and for internal use only</p>
+        </div>
+      </body>
+      </html>`;
+      
+      const blob = new Blob([html], { type: 'application/msword' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `Borrowers_Report_${timestamp}.doc`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+      setExportingWord(false);
+      
+    } catch (error) {
+      console.error('Word export error:', error);
+      setExportingWord(false);
+      alert('Error exporting Word document: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1125,7 +1595,7 @@ export default function BorrowersPage() {
         <div>
           <p className={THEME.classes.subtitle}>ADMINISTRATIVE INTERFACE</p>
           <h2 className={THEME.classes.title}>Customer Portfolio & Credit Risk</h2>
-        </div>
+</div>
         <div className="flex flex-wrap gap-3 items-center">
           <button
             type="button"
@@ -1134,10 +1604,11 @@ export default function BorrowersPage() {
             disabled={exporting || exportingExcel}
             className="border border-black bg-white text-black px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-colors disabled:opacity-50"
           >
-            {exportingExcel ? 'EXPORTING EXCEL SHEET...' : 'EXPORT EXCEL SHEET'}
+            {exportingExcel ? 'EXPORTING EXCEL SHEET...' : 'EXPORT EXCEL'}
           </button>
           {exportStatus && (
-            <div className="text-xs font-mono text-zinc-600 mt-1 w-full">{exportStatus}</div>
+            <div className="text-xs font-mono text-zinc-600 mt-1 w-full">{exportStatus}
+</div>
           )}
           <Link href="/dashboard/borrowers/new" className={THEME.classes.btnPrimary}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -1153,8 +1624,8 @@ export default function BorrowersPage() {
                 Export to Excel
               </button>
           </Link>
-        </div>
-      </div>
+</div>
+</div>
 
       {/* Main Split Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
@@ -1181,7 +1652,7 @@ export default function BorrowersPage() {
                 )}
               </button>
               <p className="text-xs text-zinc-500 font-mono mt-0.5">Total accounts: {borrowers.length}</p>
-            </div>
+</div>
 
             {/* Search box */}
             <div className="relative">
@@ -1195,14 +1666,14 @@ export default function BorrowersPage() {
               <svg className="absolute right-3 top-3.5 h-3.5 w-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
-            </div>
+</div>
 
             {/* Table / List */}
             <div className="overflow-y-auto flex-1 max-h-[calc(100vh-220px)] border border-black divide-y divide-black">
               {filteredBorrowers.length === 0 ? (
                 <div className="p-8 text-center text-xs font-mono text-zinc-400 uppercase tracking-widest">
                   No borrowers found
-                </div>
+</div>
               ) : (
                 filteredBorrowers.map((user) => {
                   const isSelected = user.id === selectedBorrowerId;
@@ -1374,6 +1845,121 @@ export default function BorrowersPage() {
     }
   };
 
+
+  // Word Document Export
+  const handleWordExport = async () => {
+    try {
+      setExportingWord(true);
+      
+      const [borrowersData, loansData] = await Promise.all([
+        fetchApi('/users/?role=borrower'),
+        fetchApi('/loans/')
+      ]);
+      
+      // Build HTML for Word document
+      let html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+            xmlns:w='urn:schemas-microsoft-com:office:word' 
+            xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Borrowers Report</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { color: #000; border-bottom: 3px solid #000; padding-bottom: 10px; }
+          table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 11px; }
+          th { background: #000; color: #fff; padding: 10px; text-align: left; border: 1px solid #000; }
+          td { padding: 8px; border: 1px solid #ccc; }
+          tr:nth-child(even) { background: #f9f9f9; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .header p { color: #666; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ccc; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Borrowers Report</h1>
+          <p>Generated: ${new Date().toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
+          <p>Total Borrowers: ${borrowersData.length}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Customer Code</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>KYC</th>
+              <th>Credit Score</th>
+              <th>Total Loans</th>
+              <th>Total Borrowed</th>
+              <th>Total Paid</th>
+              <th>Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      
+      borrowersData.forEach((borrower: any, index: number) => {
+        const borrowerLoans = loansData.filter((loan: any) => loan.user_id === borrower.id);
+        const totalBorrowed = borrowerLoans.reduce((sum: number, l: any) => sum + (l.principal_amount || 0), 0);
+        const totalPaid = borrowerLoans.reduce((sum: number, l: any) => sum + (l.total_paid || 0), 0);
+        const totalOutstanding = borrowerLoans.reduce((sum: number, l: any) => sum + (l.outstanding_balance || 0), 0);
+        const customer = borrower.customer_profile || {};
+        
+        html += `
+            <tr>
+              <td>${index + 1}</td>
+              <td>${customer?.customer_code || ''}</td>
+              <td>${borrower.full_name || ''}</td>
+              <td>${borrower.email || ''}</td>
+              <td>${borrower.phone_number || ''}</td>
+              <td>${borrower.is_active ? 'Active' : 'Inactive'}</td>
+              <td>${customer?.kyc_status || 'Pending'}</td>
+              <td>${customer?.credit_score || 'N/A'}</td>
+              <td>${borrowerLoans.length}</td>
+              <td>KES ${totalBorrowed.toLocaleString()}</td>
+              <td>KES ${totalPaid.toLocaleString()}</td>
+              <td>KES ${totalOutstanding.toLocaleString()}</td>
+            </tr>`;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>Report generated from Karibu Credit System</p>
+          <p>All data is confidential and for internal use only</p>
+        </div>
+      </body>
+      </html>`;
+      
+      const blob = new Blob([html], { type: 'application/msword' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      link.download = `Borrowers_Report_${timestamp}.doc`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+      setExportingWord(false);
+      
+    } catch (error) {
+      console.error('Word export error:', error);
+      setExportingWord(false);
+      alert('Error exporting Word document: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   return (
                     <div key={user.id}>
                     <div
@@ -1399,14 +1985,15 @@ export default function BorrowersPage() {
                         {isExpanded ? '▲' : '▼'}
                       </button>
                       <div className="min-w-0 pr-3 flex-1">
-                        <div className="font-bold text-xs uppercase tracking-wide truncate">{user.full_name}</div>
+                        <div className="font-bold text-xs uppercase tracking-wide truncate">{user.full_name}
+</div>
                         <div className={`text-[10px] font-mono mt-0.5 truncate ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`}>
                           {user.email}
-                        </div>
+</div>
                         <div className={`text-[10px] font-mono mt-0.5 ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`}>
                           {user.phone_number || 'NO PHONE'}
-                        </div>
-                      </div>
+</div>
+</div>
                       <div className="flex-shrink-0 flex items-center gap-2">
                         <span className={`border text-[9px] font-mono uppercase font-bold tracking-wider px-2 py-0.5 ${
                           isSelected 
@@ -1415,21 +2002,27 @@ export default function BorrowersPage() {
                         }`}>
                           ID #{user.id}
                         </span>
-                      </div>
-                    </div>
+</div>
+</div>
                     {isExpanded && (
                       <div className="p-4 bg-zinc-50 border-t border-black space-y-4">
                         <div>
                           <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Personal Details</h5>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] font-mono uppercase">
-                            <div className="flex justify-between"><span className="text-zinc-500">Full Name</span><span className="text-black font-bold">{user.full_name}</span></div>
-                            <div className="flex justify-between"><span className="text-zinc-500">Email</span><span className="text-black font-bold truncate ml-2">{user.email}</span></div>
-                            <div className="flex justify-between"><span className="text-zinc-500">Phone</span><span className="text-black font-bold">{user.phone_number || '—'}</span></div>
-                            <div className="flex justify-between"><span className="text-zinc-500">National ID</span><span className="text-black font-bold">{rowCustomer.national_id}</span></div>
-                            <div className="flex justify-between"><span className="text-zinc-500">KRA PIN</span><span className="text-black font-bold">{rowCustomer.kra_pin || 'NOT PROVIDED'}</span></div>
-                            <div className="flex justify-between"><span className="text-zinc-500">KYC Status</span><span className="text-black font-bold">{rowCustomer.kyc_status}</span></div>
-                          </div>
-                        </div>
+                            <div className="flex justify-between"><span className="text-zinc-500">Full Name</span><span className="text-black font-bold">{user.full_name}</span>
+</div>
+                            <div className="flex justify-between"><span className="text-zinc-500">Email</span><span className="text-black font-bold truncate ml-2">{user.email}</span>
+</div>
+                            <div className="flex justify-between"><span className="text-zinc-500">Phone</span><span className="text-black font-bold">{user.phone_number || '—'}</span>
+</div>
+                            <div className="flex justify-between"><span className="text-zinc-500">National ID</span><span className="text-black font-bold">{rowCustomer.national_id}</span>
+</div>
+                            <div className="flex justify-between"><span className="text-zinc-500">KRA PIN</span><span className="text-black font-bold">{rowCustomer.kra_pin || 'NOT PROVIDED'}</span>
+</div>
+                            <div className="flex justify-between"><span className="text-zinc-500">KYC Status</span><span className="text-black font-bold">{rowCustomer.kyc_status}</span>
+</div>
+</div>
+</div>
                         <div>
                           <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Current Loan</h5>
                           {currentLoan ? (
@@ -1438,15 +2031,17 @@ export default function BorrowersPage() {
                               <span>KES {currentLoan.principal_amount.toLocaleString()}</span>
                               <span>Outstanding: KES {currentLoan.outstanding_balance.toLocaleString()}</span>
                               <span className={THEME.classes.badgeOutline}>{currentLoan.status}</span>
-                            </div>
+</div>
                           ) : (
-                            <div className="text-[11px] font-mono uppercase text-zinc-400">No active loan</div>
+                            <div className="text-[11px] font-mono uppercase text-zinc-400">No active loan
+</div>
                           )}
-                        </div>
+</div>
                         <div>
                           <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">All Loans ({rowLoans.length})</h5>
                           {rowLoans.length === 0 ? (
-                            <div className="text-[11px] font-mono uppercase text-zinc-400">No loan applications on file</div>
+                            <div className="text-[11px] font-mono uppercase text-zinc-400">No loan applications on file
+</div>
                           ) : (
                             <div className="border border-black divide-y divide-black">
                               {rowLoans.map((l) => (
@@ -1463,19 +2058,19 @@ export default function BorrowersPage() {
                                   }>
                                     {l.status}
                                   </span>
-                                </div>
+</div>
                               ))}
-                            </div>
+</div>
                           )}
-                        </div>
-                      </div>
+</div>
+</div>
                     )}
-                    </div>
+</div>
                   );
                 })
               )}
-            </div>
-          </div>
+</div>
+</div>
         )}
 
         {/* Right Side: Detail Statistics View */}
@@ -1519,18 +2114,22 @@ export default function BorrowersPage() {
                     <span className={THEME.classes.badgeFilled}>
                       {selectedBorrower.is_active ? 'ACTIVE ACCOUNT' : 'INACTIVE'}
                     </span>
-                  </div>
+</div>
                   <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs font-mono uppercase text-zinc-500">
-                    <div>Email: <span className="text-black font-semibold">{selectedBorrower.email}</span></div>
-                    <div>Phone: <span className="text-black font-semibold">{selectedBorrower.phone_number || '—'}</span></div>
+                    <div>Email: <span className="text-black font-semibold">{selectedBorrower.email}</span>
+</div>
+                    <div>Phone: <span className="text-black font-semibold">{selectedBorrower.phone_number || '—'}</span>
+</div>
                     {selectedBorrowerCustomer && (
                       <>
-                        <div>Code: <span className="text-black font-semibold">{selectedBorrowerCustomer.customer_code}</span></div>
-                        <div>National ID: <span className="text-black font-semibold">{selectedBorrowerCustomer.national_id}</span></div>
+                        <div>Code: <span className="text-black font-semibold">{selectedBorrowerCustomer.customer_code}</span>
+</div>
+                        <div>National ID: <span className="text-black font-semibold">{selectedBorrowerCustomer.national_id}</span>
+</div>
                       </>
                     )}
-                  </div>
-                </div>
+</div>
+</div>
 
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -1546,8 +2145,8 @@ export default function BorrowersPage() {
                   >
                     CREATE LOAN
                   </Link>
-                </div>
-              </div>
+</div>
+</div>
 
               {/* CRB Simulation Banner */}
               {crbResult && (
@@ -1556,52 +2155,58 @@ export default function BorrowersPage() {
                     <span className="font-bold">CRB INQUIRY RESULT</span>
                     <div className="mt-1 text-[11px] text-zinc-600">
                       Score: <span className="text-black font-bold">{crbResult.score}</span> | Risk Grading: <span className="text-black font-bold">{crbResult.grading}</span>
-                    </div>
-                  </div>
+</div>
+</div>
                   <div className="border border-black bg-black text-white px-2 py-1 font-bold">
                     PASSED
-                  </div>
-                </div>
+</div>
+</div>
               )}
 
               {/* 4 Stats Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="border border-black p-3 bg-white">
-                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">LOANS APPLIED</div>
-                  <div className="text-2xl font-bold font-mono text-black mt-1">{stats.totalLoans}</div>
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">LOANS APPLIED
+</div>
+                  <div className="text-2xl font-bold font-mono text-black mt-1">{stats.totalLoans}
+</div>
                   <div className="text-[9px] font-mono text-zinc-400 mt-1 uppercase">
                     {stats.pendingLoans} PENDING
-                  </div>
-                </div>
+</div>
+</div>
 
                 <div className="border border-black p-3 bg-white">
-                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">FULLY PAID</div>
-                  <div className="text-2xl font-bold font-mono text-black mt-1">{stats.paidLoans}</div>
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">FULLY PAID
+</div>
+                  <div className="text-2xl font-bold font-mono text-black mt-1">{stats.paidLoans}
+</div>
                   <div className="text-[9px] font-mono text-zinc-400 mt-1 uppercase">
                     {stats.activeLoans} ACTIVE DEBTS
-                  </div>
-                </div>
+</div>
+</div>
 
                 <div className="border border-black p-3 bg-white">
-                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">OUTSTANDING</div>
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">OUTSTANDING
+</div>
                   <div className="text-lg font-bold font-mono text-black mt-1.5 truncate">
                     KES {stats.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 0 })}
-                  </div>
+</div>
                   <div className="text-[9px] font-mono text-zinc-400 mt-1 uppercase">
                     FROM {stats.totalPrincipal.toLocaleString()} PRINCIPAL
-                  </div>
-                </div>
+</div>
+</div>
 
                 <div className="border border-black p-3 bg-white">
-                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">CREDIT SCORE</div>
+                  <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">CREDIT SCORE
+</div>
                   <div className="text-2xl font-bold font-mono text-black mt-1">
                     {selectedBorrowerCustomer?.credit_score || 'N/A'}
-                  </div>
+</div>
                   <div className="text-[9px] font-mono text-zinc-400 mt-1 uppercase">
                     LIMIT: KES {selectedBorrowerCustomer?.max_loan_limit.toLocaleString()}
-                  </div>
-                </div>
-              </div>
+</div>
+</div>
+</div>
 
               {/* Stats Rows & Charts */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -1615,38 +2220,38 @@ export default function BorrowersPage() {
                       <span className="text-black font-bold">
                         KES {stats.totalPrincipal.toLocaleString()}
                       </span>
-                    </div>
+</div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Total Repaid</span>
                       <span className="text-black font-bold">
                         KES {stats.totalRepaid.toLocaleString()}
                       </span>
-                    </div>
+</div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Repayment Rate</span>
                       <span className="text-black font-bold">
                         {stats.repaymentRate.toFixed(1)}%
                       </span>
-                    </div>
+</div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">KRA PIN</span>
                       <span className="text-black font-bold">
                         {selectedBorrowerCustomer?.kra_pin || 'NOT PROVIDED'}
                       </span>
-                    </div>
+</div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">KYC Status</span>
                       <span className="text-black font-bold">
                         {selectedBorrowerCustomer?.kyc_status || 'PENDING'}
                       </span>
-                    </div>
-                  </div>
+</div>
+</div>
 
                   {/* Meter */}
                   <div className="pt-2">
                     <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">
                       CREDIT RATING METER
-                    </div>
+</div>
                     <div className="h-4 w-full border border-black bg-white relative overflow-hidden">
                       <div
                         className="h-full bg-black transition-all duration-300"
@@ -1654,13 +2259,13 @@ export default function BorrowersPage() {
                           width: `${selectedBorrowerCustomer ? Math.min(100, Math.max(0, ((selectedBorrowerCustomer.credit_score - 300) / 550) * 100)) : 0}%`,
                         }}
                       />
-                    </div>
+</div>
                     <div className="flex justify-between text-[8px] font-mono text-zinc-400 uppercase mt-1">
                       <span>300 (POOR)</span>
                       <span>850 (EXCELLENT)</span>
-                    </div>
-                  </div>
-                </div>
+</div>
+</div>
+</div>
 
                 {/* Chart */}
                 <div className="md:col-span-7 border border-black p-4 flex flex-col">
@@ -1669,50 +2274,61 @@ export default function BorrowersPage() {
                   </h4>
                   <div className="flex-1 min-h-[160px] relative">
                     <Bar data={chartData} options={THEME.chart.options} />
-                  </div>
-                </div>
-              </div>
+</div>
+</div>
+</div>
 
               {/* Personal Details & Eligibility */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="border border-black p-4 space-y-3">
                   <h4 className={THEME.classes.sectionTitle}>Personal Details</h4>
                   <div className="space-y-2 text-xs font-mono uppercase">
-                    <div className="flex justify-between"><span className="text-zinc-500">Full Name</span><span className="text-black font-bold">{selectedBorrower.full_name}</span></div>
-                    <div className="flex justify-between"><span className="text-zinc-500">Email</span><span className="text-black font-bold">{selectedBorrower.email}</span></div>
-                    <div className="flex justify-between"><span className="text-zinc-500">Phone</span><span className="text-black font-bold">{selectedBorrower.phone_number || '—'}</span></div>
-                    <div className="flex justify-between"><span className="text-zinc-500">National ID</span><span className="text-black font-bold">{selectedBorrowerCustomer?.national_id || '—'}</span></div>
-                    <div className="flex justify-between"><span className="text-zinc-500">KRA PIN</span><span className="text-black font-bold">{selectedBorrowerCustomer?.kra_pin || 'NOT PROVIDED'}</span></div>
-                    <div className="flex justify-between"><span className="text-zinc-500">Customer Code</span><span className="text-black font-bold">{selectedBorrowerCustomer?.customer_code || '—'}</span></div>
-                    <div className="flex justify-between"><span className="text-zinc-500">Account Status</span><span className="text-black font-bold">{selectedBorrower.is_active ? 'ACTIVE' : 'INACTIVE'}</span></div>
+                    <div className="flex justify-between"><span className="text-zinc-500">Full Name</span><span className="text-black font-bold">{selectedBorrower.full_name}</span>
+</div>
+                    <div className="flex justify-between"><span className="text-zinc-500">Email</span><span className="text-black font-bold">{selectedBorrower.email}</span>
+</div>
+                    <div className="flex justify-between"><span className="text-zinc-500">Phone</span><span className="text-black font-bold">{selectedBorrower.phone_number || '—'}</span>
+</div>
+                    <div className="flex justify-between"><span className="text-zinc-500">National ID</span><span className="text-black font-bold">{selectedBorrowerCustomer?.national_id || '—'}</span>
+</div>
+                    <div className="flex justify-between"><span className="text-zinc-500">KRA PIN</span><span className="text-black font-bold">{selectedBorrowerCustomer?.kra_pin || 'NOT PROVIDED'}</span>
+</div>
+                    <div className="flex justify-between"><span className="text-zinc-500">Customer Code</span><span className="text-black font-bold">{selectedBorrowerCustomer?.customer_code || '—'}</span>
+</div>
+                    <div className="flex justify-between"><span className="text-zinc-500">Account Status</span><span className="text-black font-bold">{selectedBorrower.is_active ? 'ACTIVE' : 'INACTIVE'}</span>
+</div>
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Blacklist</span>
                       <span className={`font-bold ${selectedBorrowerCustomer?.blacklisted ? 'text-red-600' : 'text-black'}`}>
                         {selectedBorrowerCustomer?.blacklisted ? `BLACKLISTED — ${selectedBorrowerCustomer.blacklisted_reason || 'no reason given'}` : 'CLEAR'}
                       </span>
-                    </div>
-                  </div>
-                </div>
+</div>
+</div>
+</div>
                 <div className="border border-black p-4 space-y-3">
                   <h4 className={THEME.classes.sectionTitle}>Loan Eligibility</h4>
                   <div className="flex items-center justify-between border border-black p-3 bg-white">
                     <div>
-                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Verdict</div>
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Verdict
+</div>
                       <div className={`text-lg font-bold uppercase mt-1 ${eligibility.eligible ? 'text-black' : 'text-red-600'}`}>
                         {eligibility.eligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}
-                      </div>
-                    </div>
+</div>
+</div>
                     <div className="text-right">
-                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Tier</div>
-                      <div className="text-lg font-bold uppercase mt-1">{eligibility.tier}</div>
-                    </div>
-                  </div>
+                      <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Tier
+</div>
+                      <div className="text-lg font-bold uppercase mt-1">{eligibility.tier}
+</div>
+</div>
+</div>
                   <div className="flex justify-between text-xs font-mono uppercase">
                     <span className="text-zinc-500">Max Eligible Amount</span>
                     <span className="text-black font-bold">KES {eligibility.maxAmount.toLocaleString()}</span>
-                  </div>
+</div>
                   <div className="pt-1">
-                    <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Underwriting Notes</div>
+                    <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Underwriting Notes
+</div>
                     <ul className="space-y-1 text-[11px] font-mono">
                       {eligibility.reasons.map((r, i) => (
                         <li key={i} className="flex gap-2">
@@ -1721,9 +2337,9 @@ export default function BorrowersPage() {
                         </li>
                       ))}
                     </ul>
-                  </div>
-                </div>
-              </div>
+</div>
+</div>
+</div>
               {/* Historical Applied Loans list */}
               <div className="space-y-3">
                 <h4 className={THEME.classes.sectionTitle}>Historical Loan Applications</h4>
@@ -1785,8 +2401,8 @@ export default function BorrowersPage() {
                       )}
                     </tbody>
                   </table>
-                </div>
-              </div>
+</div>
+</div>
             </>
           ) : (
             <div className="min-h-[500px] flex flex-col items-center justify-center text-center p-8 uppercase font-mono text-zinc-400 tracking-widest border border-dashed border-black">
@@ -1794,22 +2410,37 @@ export default function BorrowersPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
               </svg>
               <span>Select a borrower from the left to load profiles and statistics</span>
-            </div>
+</div>
           )}
-        </div>
+</div>
         )}
-
-      </div>
+</div>
 
       {/* Summary Footer */}
       <div className="border border-black bg-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs font-mono uppercase text-black gap-2">
         <div>
           ACTIVE CUSTOMERS: <span className="font-bold">{borrowers.filter(b => b.is_active).length}</span> | INACTIVE: <span className="font-bold">{borrowers.filter(b => !b.is_active).length}</span>
-        </div>
+</div>
         <div>
           TOTAL SYSTEM LOANS RECORDED: <span className="font-bold">{loans.length}</span>
-        </div>
-      </div>
-    </div>
+</div>
+</div>
+
+          {/* Load More - Mobile friendly */}
+          {displayedBorrowers.length < borrowers.length && (
+            <div className="flex justify-center py-4">
+              <button
+                onClick={() => {
+                  const nextBatch = borrowers.slice(0, displayedBorrowers.length + itemsPerPage);
+                  setDisplayedBorrowers(nextBatch);
+                }}
+                className="border border-black bg-white text-black px-6 py-3 text-sm font-bold uppercase tracking-wider hover:bg-black hover:text-white transition-colors w-full sm:w-auto"
+                style={{ fontFamily: "monospace" }}
+              >
+                Load More ({displayedBorrowers.length} of {borrowers.length})
+              </button>
+            </div>
+          )}
+</div>
   );
 }
