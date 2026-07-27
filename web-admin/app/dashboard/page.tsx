@@ -440,11 +440,11 @@ function CfoDashboard({ stats, transactions }: { stats: any; transactions: Trans
           <div className={THEME.classes.card + " space-y-3 bg-zinc-50"}>
             <div style={{ fontSize:'10px', fontWeight:700, color: '#000', fontFamily: 'monospace' }}>2 Settlement Discrepancies</div>
             <p style={{ fontSize:'11px', color:THEME.colors.textSecondary, lineHeight:1.5 }}>
-              Two KCB API transactions did not return callbacks within the 30-min SLA. Automated recovery cron initiated.
+              Two ZamuPay API transactions did not return callbacks within the 30-min SLA. Automated recovery cron initiated.
             </p>
             <div style={{ fontSize:'10px', fontFamily:'monospace', background:'white', border: '1px solid #000', padding:'0.625rem', color:THEME.colors.textSecondary }}>
-              <div style={{ display:'flex', justifyContent:'space-between' }}><span>KCB-781A8X</span><strong>KES 50,000</strong></div>
-              <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}><span>KCB-902Y1T</span><strong>KES 50,000</strong></div>
+              <div style={{ display:'flex', justifyContent:'space-between' }}><span>ZAMU-781A8X</span><strong>KES 50,000</strong></div>
+              <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}><span>ZAMU-902Y1T</span><strong>KES 50,000</strong></div>
             </div>
             <button className={THEME.classes.btnPrimary + " w-full text-base"}>
               Re-Trigger Reconciliation

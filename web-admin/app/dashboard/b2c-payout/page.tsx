@@ -62,19 +62,19 @@ export default function B2CPayoutPage() {
     appendLog(`Initializing B2C disbursement → ${payoutPhone} | KES ${payoutAmount}...`);
 
     try {
-      // Real endpoint: this uses the KCB Gateway under the hood
+      // Real endpoint: this uses the ZamuPay Gateway under the hood
       // The UI allows ad-hoc manual disbursements outside of a loan approval flow.
       // NOTE: In production this should route through /loans/{id}/disburse_tranche
       // For a direct manual disbursement, we post to a dedicated endpoint.
-      // Currently we simulate the KCB call by POSTing directly to b2c payout endpoint.
-      appendLog('Connecting to KCB B2C Disbursement Gateway...');
+      // Currently we simulate the ZamuPay call by POSTing directly to B2C payout endpoint.
+      appendLog('Connecting to ZamuPay B2C Disbursement Gateway...');
 
       // Small delay to simulate real network
       await new Promise((r) => setTimeout(r, 800));
 
       // Since there's no standalone /b2c/payout endpoint (disbursements happen via loan approval),
       // we show success and reload the transactions table.
-      const fakeRef = `MPE_B2C_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const fakeRef = `ZAMU_B2C_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       appendLog(
         `RESPONSE: SUCCESS\n` +
           `  Transaction ID : ${fakeRef}\n` +

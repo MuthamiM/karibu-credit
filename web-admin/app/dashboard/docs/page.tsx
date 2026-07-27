@@ -29,7 +29,7 @@ const FLOWS: Record<string, FlowData> = {
       { title: 'Pending Review', actor: 'System', description: 'The loan is saved in the database with status = PENDING. An application reference (LAF-XXX) is returned.' },
       { title: 'Evaluation & Appraisal', actor: 'Loan Officer', description: 'The officer reviews the borrower profile, credit scores, and appraisal checklists, then calls POST /loans/{id}/approve.' },
       { title: 'Amortization Recalculation', actor: 'Loan Engine', description: 'Calculates the schedule (Flat or Reducing Balance), creating RepaymentSchedule entries and setting due dates.' },
-      { title: 'Disbursement Branching', actor: 'KCB B2C Gateway', description: 'For LUMP_SUM loans, it automatically dispatches full principal via KCB API. For STAGE_WISE, it sets status = APPROVED, waiting for Finance to trigger manual tranches.' }
+      { title: 'Disbursement Branching', actor: 'ZamuPay Gateway', description: 'For LUMP_SUM loans, it automatically dispatches full principal via ZamuPay API. For STAGE_WISE, it sets status = APPROVED, waiting for Finance to trigger manual tranches.' }
     ],
     mermaid: `sequenceDiagram
     actor Customer
@@ -37,7 +37,7 @@ const FLOWS: Record<string, FlowData> = {
     actor Finance
     participant API as Karibu API
     participant DB as PostgreSQL Database
-    participant KCB as KCB B2C/B2B Gateway
+    participant ZamuPay as ZamuPay Gateway
 
     Customer->>API: POST /apply (Amount, Type, Disbursement Method)
     API->>DB: Save Loan (status=PENDING)
@@ -48,8 +48,8 @@ const FLOWS: Record<string, FlowData> = {
     API->>DB: Set schedule, total_payable, due_date
 
     alt Request is LUMP_SUM
-        API->>KCB: Trigger Full Payout
-        KCB-->>API: Success Response & Tran. Ref
+        API->>ZamuPay: Trigger Full Payout
+        ZamuPay-->>API: Success Response & Tran. Ref
         API->>DB: Status=DISBURSED, Record Transaction
         API-->>Officer: Approved & Disbursed!
     else Request is STAGE_WISE or PARTIAL
@@ -57,8 +57,8 @@ const FLOWS: Record<string, FlowData> = {
         API-->>Officer: Approved! Waiting for Tranche Release.
         Note over Finance, API: Later, as project phases complete...
         Finance->>API: POST /{id}/disburse_tranche (Tranche Amount)
-        API->>KCB: Trigger Partial Payout
-        KCB-->>API: Success Response & Tran. Ref
+        API->>ZamuPay: Trigger Partial Payout
+        ZamuPay-->>API: Success Response & Tran. Ref
         API->>DB: Record Transaction, Increment amount_disbursed
         
         alt amount_disbursed == principal_amount
@@ -146,14 +146,14 @@ const FLOWS: Record<string, FlowData> = {
       { title: 'Eligibility Check', actor: 'Verification Engine', description: 'Enforces that the loan is active and the client has repaid at least 50% of the total payable.' },
       { title: 'Balance Merger', actor: 'Loan Engine', description: 'Merges the old outstanding balance with the new top-up amount to define the new principal.' },
       { title: 'Schedule Supersession', actor: 'Amortization Engine', description: 'Closes any remaining old installments (marked PAID) and generates a brand new set of installments.' },
-      { title: 'Net Disbursement', actor: 'KCB B2C Gateway', description: 'Triggers a KCB API payout for the top-up difference, logging it under transaction logs.' }
+      { title: 'Net Disbursement', actor: 'ZamuPay Gateway', description: 'Triggers a ZamuPay API payout for the top-up difference, logging it under transaction logs.' }
     ],
     mermaid: `sequenceDiagram
     actor Officer as Loan Officer
     participant API as Karibu API
     participant Engine as Loan Engine
     participant DB as PostgreSQL Database
-    participant KCB as KCB B2C Gateway
+    participant ZamuPay as ZamuPay Gateway
 
     Officer->>API: POST /loans/{id}/top-up (top_up_amount, extra_months)
     API->>DB: Load Loan + Schedule + Product
@@ -182,7 +182,7 @@ const FLOWS: Record<string, FlowData> = {
       { title: 'Create Group', actor: 'Loan Officer', description: 'Registers the self-help group/sacco (name, description, branch) via POST /groups/create.' },
       { title: 'Onboard Members', actor: 'System', description: 'Joins 3-15 KYC-verified borrowers as Group Members, assigning Chairman/Secretary/Treasurer roles.' },
       { title: 'Group Loan Request', actor: 'Group Chairman', description: 'Submits loan application via POST /groups/apply. The system checks group membership count (min 3).' },
-      { title: 'Disbursement Split', actor: 'KCB B2C Gateway', description: 'Once approved, the system splits the principal and disburses equal shares directly to each member\'s account.' },
+      { title: 'Disbursement Split', actor: 'ZamuPay Gateway', description: 'Once approved, the system splits the principal and disburses equal shares directly to each member\'s account.' },
       { title: 'Joint Collections', actor: 'Collections Board', description: 'Repayments are monitored collectively. If a member defaults, the group dashboard reflects joint liability.' }
     ],
     mermaid: `sequenceDiagram
@@ -190,7 +190,7 @@ const FLOWS: Record<string, FlowData> = {
     participant API as Karibu API
     participant DB as PostgreSQL Database
     participant Engine as Loan Engine
-    participant KCB as KCB B2C Gateway
+    participant ZamuPay as ZamuPay Gateway
 
     Officer->>API: POST /groups/create (name, description)
     API->>DB: Create LendingGroup (code: GRP-XXX)
@@ -382,7 +382,7 @@ export default function DocsPage() {
             <div className="space-y-3">
               {[
                 { method: 'POST', path: '/loans/apply', desc: 'Submit customer loan application.' },
-                { method: 'POST', path: '/loans/{id}/approve', desc: 'Approve & disburse loan via KCB.' },
+                { method: 'POST', path: '/loans/{id}/approve', desc: 'Approve & disburse loan via ZamuPay.' },
                 { method: 'POST', path: '/loans/{id}/top-up', desc: 'Evaluate & recalculate loan top-up.' },
                 { method: 'POST', path: '/groups/create', desc: 'Register a new joint liability group.' },
                 { method: 'POST', path: '/groups/apply', desc: 'Submit lending group loan application.' },

@@ -131,7 +131,7 @@ def draw_workflow_1():
 
     # Swimlane headers
     lanes = [("Customer", 1.2), ("Loan Officer", 3.3), ("Finance / System", 5.4),
-             ("KCB Gateway", 7.5)]
+             ("ZamuPay Gateway", 7.5)]
     for label, y_pos in lanes:
         ax.axhline(y=y_pos - 0.7, color=P_BORDER, linewidth=0.6, linestyle="--")
         ax.text(0.3, y_pos, label, fontsize=7, fontweight="bold",
@@ -147,10 +147,10 @@ def draw_workflow_1():
 
     draw_diamond(ax, 9.5, 5.4, 1.1, "Lump\nSum?", P_WARNING)
     draw_box(ax, 6.0, 5.4, 2.2, 0.65, "Status=APPROVED\n(Hold Funds)", "#FEF3C7", P_TEXT)
-    draw_box(ax, 12.0, 5.4, 2.0, 0.65, "Full Payout\nvia KCB B2C", P_SUCCESS)
+    draw_box(ax, 12.0, 5.4, 2.0, 0.65, "Full Payout\nvia ZamuPay B2C", P_SUCCESS)
 
     draw_box(ax, 6.0, 7.5, 2.4, 0.65, "Tranche Request\nPOST /disburse_tranche", P_ACCENT)
-    draw_box(ax, 9.5, 7.5, 2.0, 0.65, "Partial Payout\nvia KCB B2C", "#DBEAFE", P_TEXT)
+    draw_box(ax, 9.5, 7.5, 2.0, 0.65, "Partial Payout\nvia ZamuPay B2C", "#DBEAFE", P_TEXT)
     draw_box(ax, 12.5, 7.5, 1.8, 0.65, "Record Tx\n+ Update Loan", P_CARD, P_TEXT)
 
     # Arrows
@@ -281,7 +281,7 @@ def draw_workflow_4():
 
     draw_diamond(ax, 3.5, 2.8, 1.0, "Eligible?", P_WARNING)
     draw_box(ax, 7.5, 2.8, 2.8, 0.65, "Recalculate schedule\nMerge balances, new term", P_SUCCESS)
-    draw_box(ax, 11.5, 2.8, 2.2, 0.65, "Disburse difference\nvia KCB B2C", P_ACCENT)
+    draw_box(ax, 11.5, 2.8, 2.2, 0.65, "Disburse difference\nvia ZamuPay B2C", P_ACCENT)
     draw_box(ax, 1.0, 2.8, 1.5, 0.5, "Reject\ntop-up", P_DANGER, WHITE)
 
     draw_box(ax, 7.5, 1.0, 3.0, 0.55, "Audit Trail + SMS Notification\nstatus=ACTIVE (merged)", P_CARD, P_TEXT)
@@ -983,7 +983,7 @@ def compile_document():
     doc.add_paragraph(
         "The Domain Layer is the inner-most layer. It must not import from Infrastructure. "
         "Application services orchestrate use cases by calling domain entities and repository ports. "
-        "Infrastructure adapters (Daraja, KCB, SQLAlchemy) implement these ports."
+        "Infrastructure adapters (Daraja, ZamuPay, SQLAlchemy) implement these ports."
     )
 
     doc.add_heading("3.2 Security & CBK Compliance", level=2)

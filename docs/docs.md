@@ -10,7 +10,7 @@ sequenceDiagram
     actor Finance
     participant API as Karibu API
     participant DB as PostgreSQL Database
-    participant KCB as KCB B2C/B2B Gateway
+    participant ZamuPay as ZamuPay Gateway
 
     Customer->>API: POST /apply (Amount, Type, Disbursement Method)
     API->>DB: Save Loan (status=PENDING)
@@ -21,8 +21,8 @@ sequenceDiagram
     API->>DB: Set schedule, total_payable, due_date
 
     alt Request is LUMP_SUM
-        API->>KCB: Trigger Full Payout
-        KCB-->>API: Success Response & Tran. Ref
+        API->>ZamuPay: Trigger Full Payout
+        ZamuPay-->>API: Success Response & Tran. Ref
         API->>DB: Status=DISBURSED, Record Transaction
         API-->>Officer: Approved & Disbursed!
     else Request is STAGE_WISE or PARTIAL
@@ -30,8 +30,8 @@ sequenceDiagram
         API-->>Officer: Approved! Waiting for Tranche Release.
         Note over Finance, API: Later, as project phases complete...
         Finance->>API: POST /{id}/disburse_tranche (Tranche Amount)
-        API->>KCB: Trigger Partial Payout
-        KCB-->>API: Success Response & Tran. Ref
+        API->>ZamuPay: Trigger Partial Payout
+        ZamuPay-->>API: Success Response & Tran. Ref
         API->>DB: Record Transaction, Increment amount_disbursed
         
         alt amount_disbursed == principal_amount
@@ -105,7 +105,7 @@ sequenceDiagram
     participant API as Karibu API
     participant Engine as Loan Engine
     participant DB as PostgreSQL Database
-    participant KCB as KCB B2C Gateway
+    participant ZamuPay as ZamuPay Gateway
 
     Officer->>API: POST /loans/{id}/top-up (top_up_amount, extra_months)
     API->>DB: Load Loan + Schedule + Product
@@ -135,7 +135,7 @@ sequenceDiagram
     participant API as Karibu API
     participant DB as PostgreSQL Database
     participant Engine as Loan Engine
-    participant KCB as KCB B2C Gateway
+    participant ZamuPay as ZamuPay Gateway
 
     Officer->>API: POST /groups/create (name, description)
     API->>DB: Create LendingGroup (code: GRP-XXX)

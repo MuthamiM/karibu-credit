@@ -79,10 +79,10 @@ Incoming payments (from M-Pesa webhooks) are allocated in the following order:
 * **Validation**: Validates that the payment is valid.
 * **Confirmation**: Receives successful Paybill payments, parses the payload using `DarajaGateway`, matches the `BillRefNumber` to the `Loan.id`, allocates repayment via the loan engine, and inserts transaction records.
 
-### 2. KCB Bank Gateway
-* **Class**: `KCBGateway` (`app/integrations/kcb.py`).
-* **Function**: Handles automated B2C payout disbursements to customer accounts.
-* **Sandbox**: Uses UAT endpoints (`https://api.uat.kcbgroup.com/v1`) with mock fallbacks in development.
+### 2. ZamuPay API Gateway
+* **Class**: `ZamuPayClient` (`app/integrations/zamupay/client.py`).
+* **Function**: Handles automated B2C loan disbursements and repayment STK pushes.
+* **Sandbox**: Integrates with ZamuPay Sandbox endpoints with credentials managed via environment variables.
 
 ---
 
