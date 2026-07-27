@@ -101,7 +101,7 @@ class LoanResponse(BaseModel):
     officer_id: Optional[int] = None
     branch_id: Optional[int] = None
     
-    kcb_reference: Optional[str] = None
+    zamupay_reference: Optional[str] = None
     mpesa_disbursement_ref: Optional[str] = None
     
     total_payable: Optional[float] = None

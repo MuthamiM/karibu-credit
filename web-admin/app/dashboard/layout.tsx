@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { fetchApi } from '../../lib/api';
@@ -143,6 +143,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [topSearchValue, setTopSearchValue] = useState<string>('');
   const [user,       setUser]       = useState<any>(null);
   const [activeRole, setActiveRole] = useState<string>('loan_officer');
+  const logoutBtnRef = useRef<HTMLButtonElement>(null);
   const [loading,    setLoading]    = useState<boolean>(true);
   const [collapsed,  setCollapsed]  = useState<boolean>(false);
 
@@ -218,10 +219,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   const handleLogout = () => {
+    console.log('LOGOUT HANDLER FIRED');
     localStorage.removeItem('token');
     localStorage.removeItem('preview_role');
     router.push('/login');
   };
+
+  useEffect(() => {
+    const btn = logoutBtnRef.current;
+    if (!btn) return;
+    const rawHandler = (e: Event) => {
+      console.log('RAW DOM LISTENER FIRED');
+      handleLogout();
+    };
+    btn.addEventListener('click', rawHandler);
+    return () => btn.removeEventListener('click', rawHandler);
+  }, []);
 
   const handleRoleChange = (role: string) => {
     localStorage.setItem('preview_role', role);
@@ -315,6 +328,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             
             <button
+              ref={logoutBtnRef}
               onClick={handleLogout}
               className="sidebar-item"
               style={{ width:'100%', background:'transparent', border: '1px solid #000', cursor:'pointer', justifyContent: collapsed ? 'center' : undefined, color:'#000', borderRadius: 0, padding: collapsed ? '0.625rem' : '0.5rem 1rem', margin: 0, fontFamily: 'monospace', textTransform: 'uppercase', fontSize: '10px', fontWeight: 700 }}

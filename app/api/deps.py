@@ -1,3 +1,4 @@
+from typing import Union
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -11,9 +12,11 @@ from app.models.user import User, UserRole
 from app.schemas.token import TokenPayload
 
 # OAuth2 expects the token to be sent in the Authorization header as "Bearer <token>"
-reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/auth/login"
-)
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+security_bearer = HTTPBearer(auto_error=False)
+reusable_oauth2 = security_bearer
+
 
 async def get_token_from_header_or_query(request: Request) -> str:
     auth = request.headers.get('Authorization')
@@ -29,13 +32,17 @@ async def get_token_from_header_or_query(request: Request) -> str:
     )
 
 async def get_current_user(
-    db: AsyncSession = Depends(get_db), token: str = Depends(reusable_oauth2)
+    db: AsyncSession = Depends(get_db), auth_token: Union[HTTPAuthorizationCredentials, str, None] = Depends(reusable_oauth2)
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not auth_token:
+        raise credentials_exception
+    token = auth_token.credentials if isinstance(auth_token, HTTPAuthorizationCredentials) else auth_token
+
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]

@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     # ── Shutdown ─────────────────────────────────────────────────────
     from app.core.cache import close_redis
     await close_redis()
-    print("🔌 Redis cache disconnected")
+    print("Redis cache disconnected")
 
 
 app = FastAPI(

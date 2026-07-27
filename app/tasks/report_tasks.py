@@ -79,7 +79,7 @@ def generate_daily_summary(self):
         with open(report_path, "w") as f:
             json.dump(report, f, indent=2)
 
-        logger.info("📊 Daily summary report generated: %s", report_path)
+        logger.info("Daily summary report generated: %s", report_path)
         return report
 
     except Exception as exc:
@@ -139,7 +139,7 @@ def generate_loan_portfolio_csv(self, filters: dict = None):
             "total_records": len(loans),
             "generated_at": datetime.now().isoformat(),
         }
-        logger.info("📄 Loan portfolio CSV generated: %s", result)
+        logger.info("Loan portfolio CSV generated: %s", result)
         return result
 
     except Exception as exc:

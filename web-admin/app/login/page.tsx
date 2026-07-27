@@ -20,6 +20,27 @@ export default function LoginPage() {
   const [otpCooldown, setOtpCooldown] = useState(0);
   const router = useRouter();
 
+  const formatAuthError = (message: string) => {
+    const cleaned = message
+      .replace(/^ERROR:\s*/i, '')
+      .replace(/_/g, ' ')
+      .trim();
+
+    if (!cleaned) {
+      return 'Sign in failed. Please try again.';
+    }
+
+    if (/invalid credentials/i.test(cleaned)) {
+      return 'The email/phone or security key is incorrect.';
+    }
+
+    if (/rate limit/i.test(cleaned)) {
+      return cleaned.replace(/retry/i, 'try again');
+    }
+
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  };
+
   useEffect(() => {
     if (otpCooldown <= 0) return;
     const timer = setInterval(() => {
@@ -358,13 +379,14 @@ export default function LoginPage() {
           {error && (
             <div style={{
               marginBottom: '1.5rem', padding: '0.75rem 1rem',
-              background: THEME.colors.surface, border: `1px solid ${THEME.colors.black}`,
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              background: '#f8f8f8', border: `1px solid ${THEME.colors.black}`,
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
               fontSize: '0.75rem',
               borderRadius: '4px',
+              lineHeight: 1.5,
             }}>
-              <span style={{ fontWeight: 'bold' }}>[!] ERROR:</span>
-              <span style={{ color: THEME.colors.black, fontWeight: 'bold' }}>{error.toUpperCase()}</span>
+              <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Sign in failed:</span>
+              <span style={{ color: THEME.colors.black }}>{' '}{formatAuthError(error)}</span>
             </div>
           )}
 
@@ -382,7 +404,10 @@ export default function LoginPage() {
                   id="login-email"
                   type="text"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError('');
+                  }}
                   placeholder="+2547XXXXXXXX or name@karibucredit.co.ke"
                   required
                   style={{
@@ -423,7 +448,10 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     minLength={6}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (error) setError('');
+                    }}
                     placeholder="Min. 6 characters"
                     required
                     style={{

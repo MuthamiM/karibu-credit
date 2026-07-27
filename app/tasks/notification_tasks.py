@@ -44,7 +44,7 @@ def send_payment_reminders(self):
             # In production, this would integrate with an SMS/email gateway
             # e.g. Africa's Talking SMS API or SendGrid
             logger.info(
-                "📱 REMINDER: Loan %s — installment #%s of KES %.2f due on %s",
+                "REMINDER: Loan %s -- installment #%s of KES %.2f due on %s",
                 schedule.loan_id,
                 schedule.instalment_no,
                 schedule.total_due,

@@ -161,8 +161,13 @@ logfile
 .idea/
 .gemini/
 
-# Temporary / Binary files
+# Temporary / Binary / PID files
 *.bak
 *.exe
 *.zip
+*.deb
+.karibu_pids
+.api-venv/
+reports/
+
 

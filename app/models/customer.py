@@ -33,6 +33,7 @@ class Customer(Base):
     blacklisted_reason = Column(String, nullable=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)
     is_repeat_borrower = Column(Boolean, default=False)
+    zamupay_kyc_stan = Column(String, nullable=True)  # ZamuPay SystemTraceAuditNumber for KYC tracking
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

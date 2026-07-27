@@ -93,7 +93,7 @@ class Loan(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)
     
     # Integrations
-    kcb_reference = Column(String, nullable=True) # Populated after KCB bank disbursement
+    zamupay_reference = Column(String, nullable=True) # ZamuPay originatorConversationId for disbursement tracking
     mpesa_disbursement_ref = Column(String, nullable=True) # Safaricom B2C disbursement code
     
     # Metrics tracking
@@ -122,7 +122,7 @@ class Transaction(Base):
     loan_id = Column(Integer, ForeignKey("loans.id"), nullable=False)
     type = Column(Enum(TransactionType), nullable=False)
     amount = Column(Float, nullable=False)
-    reference_code = Column(String, unique=True, index=True) # M-pesa Receipt No. or KCB Ref
+    reference_code = Column(String, unique=True, index=True) # M-pesa Receipt No. or ZamuPay Ref
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

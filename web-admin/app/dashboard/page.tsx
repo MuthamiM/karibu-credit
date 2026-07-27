@@ -184,11 +184,19 @@ export default function DashboardOverview() {
   const [loading,      setLoading]      = useState<boolean>(true);
 
   useEffect(() => {
+    async function loadRole() {
+      const override = localStorage.getItem('preview_role');
+      if (override) { setActiveRole(override); return; }
+      try {
+        const me = await fetchApi('/users/me');
+        if (me?.role) setActiveRole(me.role);
+      } catch { /* fall back to default */ }
+    }
+    loadRole();
     const sync = () => {
       const r = localStorage.getItem('preview_role');
       if (r) setActiveRole(r);
     };
-    sync();
     window.addEventListener('preview-role-changed', sync);
     return () => window.removeEventListener('preview-role-changed', sync);
   }, []);

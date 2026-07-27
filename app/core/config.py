@@ -40,10 +40,6 @@ class Settings(BaseSettings):
     # Default password used by init_db.py to seed admin accounts
     DEFAULT_ADMIN_PASSWORD: str = "change_me_in_production"
 
-    # KCB API Gateway
-    KCB_CLIENT_ID: str = ""
-    KCB_CLIENT_SECRET: str = ""
-
     # OTP GATEWAY
     OTP_GATEWAY_URL: str = "https://excavate-undying-atom.ngrok-free.dev"
     OTP_GATEWAY_USER: str = "sms"

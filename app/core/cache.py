@@ -38,7 +38,7 @@ async def init_redis() -> aioredis.Redis:
     )
     # Verify connectivity
     await _redis_pool.ping()
-    logger.info("✅ Redis connected at %s", settings.REDIS_URL)
+    logger.info("Redis connected at %s", settings.REDIS_URL)
     return _redis_pool
 
 
@@ -48,7 +48,7 @@ async def close_redis() -> None:
     if _redis_pool:
         await _redis_pool.close()
         _redis_pool = None
-        logger.info("🔌 Redis connection closed")
+        logger.info("Redis connection closed")
 
 
 def get_redis() -> aioredis.Redis:

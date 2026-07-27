@@ -15,12 +15,14 @@ from app.models.loan import Loan, LoanStatus, Transaction, TransactionType, Disb
 from app.schemas.loan import LoanCreate, LoanCreateAdmin, LoanResponse, AmortizationScheduleInfo, DisbursementRequest, CRBCheckRequest, CRBCheckResponse, CollateralCreate, CollateralResponse
 from app.core import loan_engine
 from app.core.audit import log_audit_event
-from app.integrations.kcb import KCBGateway
+from app.integrations.zamupay import ZamuPayClient
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Instantiate KCB Gateway Service
-kcb_gateway = KCBGateway()
+# Instantiate ZamuPay Gateway Service
+zamupay_client = ZamuPayClient()
 
 
 async def get_loan_with_relations(db: AsyncSession, loan_id: int) -> Loan:
@@ -241,7 +243,7 @@ async def approve_loan(
 ):
     """
     Approve loans (Restricted to Loan Officers & Finance Team).
-    If it's a LUMP_SUM loan, it immediately triggers the KCB API to DISBURSE full funds to the client.
+    If it's a LUMP_SUM loan, it immediately triggers ZamuPay to DISBURSE full funds to the borrower's M-Pesa.
     If it's PARTIAL or STAGE_WISE, it marks the loan as APPROVED but requires explicit separate disbursement calls.
     """
     if current_user.role not in [UserRole.LOAN_OFFICER, UserRole.FINANCE, UserRole.SUPER_ADMIN]:
@@ -308,40 +310,58 @@ async def approve_loan(
     loan.status = LoanStatus.APPROVED
     
     if loan.disbursement_method == DisbursementMethod.LUMP_SUM:
-        ref = str(uuid.uuid4())[:8].upper()
-        account_target = "0700000000"
+        account_target = None
         if loan.customer and loan.customer.phone:
             account_target = loan.customer.phone
         elif loan.user and loan.user.phone_number:
             account_target = loan.user.phone_number
-            
-        disbursement_resp = await kcb_gateway.disburse_loan(
-            account_no=account_target,
-            amount=loan.principal_amount,
-            reference=ref
-        )
-        
-        if disbursement_resp["status"] == "success":
-            loan.status = LoanStatus.DISBURSED
+
+        if not account_target:
+            raise HTTPException(status_code=400, detail="No phone number on file for disbursement")
+
+        # Idempotency key: loan_id + attempt, NOT a random UUID
+        idempotency_key = f"{loan.id}-disb-1"
+        borrower_name = loan.customer.full_name if loan.customer else "Karibu Borrower"
+
+        try:
+            zamupay_resp = await zamupay_client.create_mpesa_mobile_transfer(
+                originator_conversation_id=idempotency_key,
+                route_id=zamupay_client.cfg.default_route_id,
+                channel_type=zamupay_client.cfg.default_channel_type,
+                amount=loan.principal_amount,
+                recipient_name=borrower_name,
+                recipient_phone_e164_no_plus=account_target.lstrip("+"),
+                reference=f"KaribuLoan-{loan.id}",
+                system_trace_audit_number=idempotency_key,
+                purpose="Loan Disbursement",
+            )
+            originator_id = zamupay_resp.message.originatorConversationId
+            loan.zamupay_reference = originator_id
             loan.amount_disbursed = loan.principal_amount
-            loan.kcb_reference = disbursement_resp["kcb_transaction_id"]
+            loan.status = LoanStatus.DISBURSED
             loan.disbursed_at = datetime.now()
-            
+
             trx = Transaction(
                 loan_id=loan.id,
                 type=TransactionType.DISBURSEMENT,
                 amount=loan.principal_amount,
-                reference_code=loan.kcb_reference
+                reference_code=f"ZAMU-{originator_id[:8]}"
             )
             db.add(trx)
-            
+
             fee_trx = Transaction(
                 loan_id=loan.id,
                 type=TransactionType.PLATFORM_FEE,
                 amount=10.0,
-                reference_code=f"FEE-{loan.kcb_reference}"
+                reference_code=f"FEE-ZAMU-{originator_id[:8]}"
             )
             db.add(fee_trx)
+        except Exception as exc:
+            logger.error("ZamuPay disbursement failed for loan #%s: %s", loan.id, exc)
+            raise HTTPException(
+                status_code=502,
+                detail=f"Disbursement failed: {exc}. Loan approved but not yet disbursed."
+            )
         
     await db.commit()
     loan = await get_loan_with_relations(db, loan.id)
@@ -392,56 +412,71 @@ async def disburse_tranche(
     if loan.amount_disbursed + payload.amount > loan.principal_amount:
         raise HTTPException(status_code=400, detail="Cannot disburse more than the approved principal amount")
         
-    ref = str(uuid.uuid4())[:8].upper()
-    
-    account_target = "0700000000"
+    account_target = None
     if loan.customer and loan.customer.phone:
         account_target = loan.customer.phone
     elif loan.user and loan.user.phone_number:
         account_target = loan.user.phone_number
-        
-    # Process through KCB integration
-    disbursement_resp = await kcb_gateway.disburse_loan(
-        account_no=account_target,
-        amount=payload.amount,
-        reference=ref
-    )
-    
-    if disbursement_resp["status"] == "success":
+
+    if not account_target:
+        raise HTTPException(status_code=400, detail="No phone number on file for disbursement")
+
+    # Idempotency key: loan_id + tranche attempt
+    idempotency_key = f"{loan.id}-tranche-{int(loan.amount_disbursed)}-{int(payload.amount)}"
+    borrower_name = loan.customer.full_name if loan.customer else "Karibu Borrower"
+
+    try:
+        zamupay_resp = await zamupay_client.create_mpesa_mobile_transfer(
+            originator_conversation_id=idempotency_key,
+            route_id=zamupay_client.cfg.default_route_id,
+            channel_type=zamupay_client.cfg.default_channel_type,
+            amount=payload.amount,
+            recipient_name=borrower_name,
+            recipient_phone_e164_no_plus=account_target.lstrip("+"),
+            reference=f"KaribuTranche-{loan.id}",
+            system_trace_audit_number=idempotency_key,
+            purpose="Loan Tranche Disbursement",
+        )
+        originator_id = zamupay_resp.message.originatorConversationId
         loan.amount_disbursed += payload.amount
-        loan.kcb_reference = disbursement_resp["kcb_transaction_id"]
-        
+        loan.zamupay_reference = originator_id
+
         if loan.amount_disbursed >= loan.principal_amount:
             loan.status = LoanStatus.DISBURSED
         else:
             loan.status = LoanStatus.PARTIALLY_DISBURSED
-            
+
         trx = Transaction(
             loan_id=loan.id,
             type=TransactionType.DISBURSEMENT,
             amount=payload.amount,
-            reference_code=loan.kcb_reference
+            reference_code=f"ZAMU-{originator_id[:8]}"
         )
         db.add(trx)
-        
-        # Platform fee: KES 10 per tranche disbursement
+
         fee_trx = Transaction(
             loan_id=loan.id,
             type=TransactionType.PLATFORM_FEE,
             amount=10.0,
-            reference_code=f"FEE-{loan.kcb_reference}"
+            reference_code=f"FEE-ZAMU-{originator_id[:8]}"
         )
         db.add(fee_trx)
-        
-        await db.commit()
-        loan = await get_loan_with_relations(db, loan.id)
-        await log_audit_event(
-            db,
-            user=current_user.email,
-            action="DISBURSE_TRANCHE",
-            details=f"Disbursed tranche of KES {payload.amount} for loan ID #{loan.id}"
+    except Exception as exc:
+        logger.error("ZamuPay tranche disbursement failed for loan #%s: %s", loan.id, exc)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Tranche disbursement failed: {exc}"
         )
-        
+
+    await db.commit()
+    loan = await get_loan_with_relations(db, loan.id)
+    await log_audit_event(
+        db,
+        user=current_user.email,
+        action="DISBURSE_TRANCHE",
+        details=f"Disbursed tranche of KES {payload.amount} for loan ID #{loan.id}"
+    )
+
     return loan
 
 @router.post("/{loan_id}/reject", response_model=LoanResponse)
