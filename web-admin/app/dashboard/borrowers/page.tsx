@@ -732,6 +732,278 @@ export default function BorrowersPage() {
   }, [selectedBorrowerLoans]);
 
   if (loading) {
+    const shimmerRows = Array.from({ length: 9 });
+    return (
+      <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
+        <style>{`
+          @keyframes karibuShimmer {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+          }
+          .karibu-skel {
+            background: linear-gradient(90deg, #e5e5e5 0px, #f5f5f5 40px, #e5e5e5 80px);
+            background-size: 800px 100%;
+            animation: karibuShimmer 1.4s linear infinite;
+          }
+        `}</style>
+
+        <div style={{ fontSize: '0.7rem', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>
+          ADMINISTRATIVE INTERFACE
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>CUSTOMER PORTFOLIO & CREDIT RISK</div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ border: '1px solid #000', padding: '0.4rem 0.8rem', fontSize: '0.7rem' }}>EXPORT EXCEL</div>
+            <div style={{ border: '1px solid #000', padding: '0.4rem 0.8rem', fontSize: '0.7rem' }}>ONBOARD BORROWER</div>
+            <div style={{ background: '#000', color: '#fff', padding: '0.4rem 0.8rem', fontSize: '0.7rem' }}>EXPORT TO EXCEL</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+          <div style={{ flex: '0 0 38%', border: '1px solid #000' }}>
+            <div style={{ padding: '1rem', borderBottom: '1px solid #000' }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>BORROWERS LIST</div>
+              <div className="karibu-skel" style={{ height: 12, width: 120, marginBottom: '0.75rem', border: '1px solid #000' }} />
+              <div style={{ border: '1px solid #000', padding: '0.5rem', fontSize: '0.7rem' }}>
+                SEARCH BY NAME, EMAIL, PHONE, OR ID...
+              </div>
+            </div>
+            <div>
+              {shimmerRows.map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    borderBottom: i === shimmerRows.length - 1 ? 'none' : '1px solid #000',
+                  }}
+                >
+                  <div className="karibu-skel" style={{ height: 14, width: 14, flexShrink: 0, border: '1px solid #000' }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="karibu-skel" style={{ height: 12, width: '55%', marginBottom: 6, border: '1px solid #000' }} />
+                    <div className="karibu-skel" style={{ height: 10, width: '70%', marginBottom: 4, border: '1px solid #000' }} />
+                    <div className="karibu-skel" style={{ height: 10, width: '40%', border: '1px solid #000' }} />
+                  </div>
+                  <div className="karibu-skel" style={{ height: 18, width: 50, flexShrink: 0, border: '1px solid #000' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ flex: 1, border: '1px solid #000', padding: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="karibu-skel" style={{ height: 22, width: 200, border: '1px solid #000' }} />
+                <div className="karibu-skel" style={{ height: 18, width: 110, border: '1px solid #000' }} />
+              </div>
+              <div style={{ border: '1px solid #000', padding: '0.4rem 0.8rem', fontSize: '0.7rem' }}>RUN CRB CHECK</div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 2rem', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+              <div>EMAIL: <span className="karibu-skel" style={{ display: 'inline-block', height: 10, width: 160, border: '1px solid #000', verticalAlign: 'middle', marginLeft: 6 }} /></div>
+              <div>PHONE: <span className="karibu-skel" style={{ display: 'inline-block', height: 10, width: 120, border: '1px solid #000', verticalAlign: 'middle', marginLeft: 6 }} /></div>
+              <div>CODE: <span className="karibu-skel" style={{ display: 'inline-block', height: 10, width: 110, border: '1px solid #000', verticalAlign: 'middle', marginLeft: 6 }} /></div>
+              <div>NATIONAL ID: <span className="karibu-skel" style={{ display: 'inline-block', height: 10, width: 90, border: '1px solid #000', verticalAlign: 'middle', marginLeft: 6 }} /></div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+              <div style={{ background: '#000', color: '#fff', padding: '0.4rem 0.8rem', fontSize: '0.7rem' }}>CREATE LOAN</div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', border: '1px solid #000', marginBottom: '1rem' }}>
+              {['LOANS APPLIED', 'FULLY PAID', 'OUTSTANDING', 'CREDIT SCORE'].map((label, i) => (
+                <div key={label} style={{ padding: '0.75rem', borderRight: i === 3 ? 'none' : '1px solid #000' }}>
+                  <div style={{ fontSize: '0.65rem', marginBottom: '0.5rem' }}>{label}</div>
+                  <div className="karibu-skel" style={{ height: 24, width: '70%', marginBottom: '0.5rem', border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ height: 8, width: '50%', border: '1px solid #000' }} />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid #000', marginBottom: '1rem' }}>
+              <div style={{ padding: '0.75rem', borderRight: '1px solid #000' }}>
+                <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>FINANCIAL SUMMARY</div>
+                {['TOTAL BORROWED', 'TOTAL REPAID', 'REPAYMENT RATE', 'KRA PIN', 'KYC STATUS'].map((label) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', marginBottom: '0.4rem' }}>
+                    <span>{label}</span>
+                    <span className="karibu-skel" style={{ display: 'inline-block', height: 10, width: 90, border: '1px solid #000' }} />
+                  </div>
+                ))}
+                <div style={{ fontWeight: 700, marginTop: '0.75rem', marginBottom: '0.4rem' }}>CREDIT RATING METER</div>
+                <div className="karibu-skel" style={{ height: 14, width: '100%', border: '1px solid #000' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', marginTop: '0.25rem' }}>
+                  <span>300 (POOR)</span>
+                  <span>850 (EXCELLENT)</span>
+                </div>
+              </div>
+              <div style={{ padding: '0.75rem' }}>
+                <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>PRINCIPAL VS REPAYMENTS</div>
+                <div style={{ height: 190, display: 'flex', alignItems: 'flex-end', gap: '0.5rem', borderBottom: '1px solid #000', paddingBottom: 4 }}>
+                  <div className="karibu-skel" style={{ width: 40, height: '75%', border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ width: 40, height: '20%', border: '1px solid #000' }} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', border: '1px solid #000', marginBottom: '1rem' }}>
+              <div style={{ padding: '0.75rem', borderRight: '1px solid #000' }}>
+                <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>PERSONAL DETAILS</div>
+                {['FULL NAME', 'EMAIL', 'PHONE', 'NATIONAL ID', 'KRA PIN', 'CUSTOMER CODE', 'ACCOUNT STATUS', 'BLACKLIST'].map((label) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '0.4rem' }}>
+                    <span>{label}</span>
+                    <span className="karibu-skel" style={{ display: 'inline-block', height: 10, width: 100, border: '1px solid #000' }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: '0.75rem' }}>
+                <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>LOAN ELIGIBILITY</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '0.5rem' }}>
+                  <span>VERDICT</span><span>TIER</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <div className="karibu-skel" style={{ height: 22, width: '55%', border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ height: 22, width: '35%', border: '1px solid #000' }} />
+                </div>
+                <div style={{ fontSize: '0.65rem', marginBottom: '0.4rem' }}>MAX ELIGIBLE AMOUNT</div>
+                <div className="karibu-skel" style={{ height: 12, width: '50%', marginBottom: '0.75rem', border: '1px solid #000' }} />
+                <div style={{ fontSize: '0.65rem', marginBottom: '0.4rem' }}>UNDERWRITING NOTES</div>
+                <div className="karibu-skel" style={{ height: 10, width: '90%', border: '1px solid #000' }} />
+              </div>
+            </div>
+
+            <div style={{ border: '1px solid #000' }}>
+              <div style={{ fontWeight: 700, padding: '0.75rem', borderBottom: '1px solid #000' }}>HISTORICAL LOAN APPLICATIONS</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', background: '#000', color: '#fff', fontSize: '0.65rem', padding: '0.5rem 0.75rem' }}>
+                <span>APPLICATION NO</span><span>PRINCIPAL</span><span>PAID AMOUNT</span><span>TERM</span><span>STATUS</span><span>ACTIONS</span>
+              </div>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem', padding: '0.6rem 0.75rem', alignItems: 'center', borderBottom: i === 2 ? 'none' : '1px solid #000' }}>
+                  {Array.from({ length: 6 }).map((__, j) => (
+                    <div key={j} className="karibu-skel" style={{ height: 10, width: '70%', border: '1px solid #000' }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (loading) {
+    const listRows = Array.from({ length: 9 });
+    const statBoxes = Array.from({ length: 4 });
+    const detailRows = Array.from({ length: 6 });
+    const historyRows = Array.from({ length: 3 });
+    return (
+      <div style={{ padding: '1.5rem', fontFamily: 'monospace' }}>
+        <style>{`
+          @keyframes karibuShimmer {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+          }
+          .karibu-skel {
+            background: linear-gradient(90deg, #e5e5e5 0px, #f5f5f5 40px, #e5e5e5 80px);
+            background-size: 800px 100%;
+            animation: karibuShimmer 1.4s linear infinite;
+          }
+        `}</style>
+
+        <div className="karibu-skel" style={{ height: 22, width: 300, marginBottom: 20, border: '1px solid #000' }} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '1.25rem' }}>
+
+          <div>
+            <div className="karibu-skel" style={{ height: 36, width: '100%', marginBottom: 12, border: '1px solid #000' }} />
+            <div style={{ border: '1px solid #000' }}>
+              {listRows.map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    borderBottom: i === listRows.length - 1 ? 'none' : '1px solid #000',
+                  }}
+                >
+                  <div className="karibu-skel" style={{ height: 12, width: '55%', marginBottom: 6, border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ height: 9, width: '70%', marginBottom: 4, border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ height: 9, width: '40%', border: '1px solid #000' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div className="karibu-skel" style={{ height: 24, width: 220, border: '1px solid #000' }} />
+              <div className="karibu-skel" style={{ height: 28, width: 140, border: '1px solid #000' }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+              {statBoxes.map((_, i) => (
+                <div key={i} style={{ border: '1px solid #000', padding: '0.85rem' }}>
+                  <div className="karibu-skel" style={{ height: 9, width: '70%', marginBottom: 10, border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ height: 20, width: '85%', border: '1px solid #000' }} />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ border: '1px solid #000', padding: '1rem' }}>
+                <div className="karibu-skel" style={{ height: 14, width: '50%', marginBottom: 14, border: '1px solid #000' }} />
+                {detailRows.map((_, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div className="karibu-skel" style={{ height: 10, width: '35%', border: '1px solid #000' }} />
+                    <div className="karibu-skel" style={{ height: 10, width: '30%', border: '1px solid #000' }} />
+                  </div>
+                ))}
+              </div>
+              <div className="karibu-skel" style={{ border: '1px solid #000', minHeight: 230 }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ border: '1px solid #000', padding: '1rem' }}>
+                <div className="karibu-skel" style={{ height: 14, width: '45%', marginBottom: 14, border: '1px solid #000' }} />
+                {detailRows.map((_, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div className="karibu-skel" style={{ height: 10, width: '30%', border: '1px solid #000' }} />
+                    <div className="karibu-skel" style={{ height: 10, width: '35%', border: '1px solid #000' }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ border: '1px solid #000', padding: '1rem' }}>
+                <div className="karibu-skel" style={{ height: 14, width: '55%', marginBottom: 14, border: '1px solid #000' }} />
+                <div className="karibu-skel" style={{ height: 28, width: '70%', marginBottom: 12, border: '1px solid #000' }} />
+                <div className="karibu-skel" style={{ height: 9, width: '90%', marginBottom: 6, border: '1px solid #000' }} />
+                <div className="karibu-skel" style={{ height: 9, width: '75%', border: '1px solid #000' }} />
+              </div>
+            </div>
+
+            <div style={{ border: '1px solid #000' }}>
+              <div className="karibu-skel" style={{ height: 30, width: '100%' }} />
+              {historyRows.map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: '1rem',
+                    padding: '0.7rem 1rem',
+                    borderTop: '1px solid #000',
+                  }}
+                >
+                  <div className="karibu-skel" style={{ height: 10, flex: 1, border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ height: 10, flex: 1, border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ height: 10, flex: 1, border: '1px solid #000' }} />
+                  <div className="karibu-skel" style={{ height: 10, width: 80, border: '1px solid #000' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (loading) {
   
   // Handle Excel export
   

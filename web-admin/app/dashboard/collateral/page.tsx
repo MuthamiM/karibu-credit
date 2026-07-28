@@ -110,6 +110,46 @@ export default function CollateralPage() {
   };
 
   if (loading) {
+    const shimmerRows = Array.from({ length: 8 });
+    return (
+      <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
+        <style>{`
+          @keyframes karibuShimmer {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+          }
+          .karibu-skel {
+            background: linear-gradient(90deg, #e5e5e5 0px, #f5f5f5 40px, #e5e5e5 80px);
+            background-size: 800px 100%;
+            animation: karibuShimmer 1.4s linear infinite;
+          }
+        `}</style>
+        <div className="karibu-skel" style={{ height: 20, width: 220, marginBottom: 24, border: '1px solid #000' }} />
+        <div style={{ border: '1px solid #000' }}>
+          {shimmerRows.map((_, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                padding: '0.85rem 1rem',
+                borderBottom: i === shimmerRows.length - 1 ? 'none' : '1px solid #000',
+              }}
+            >
+              <div className="karibu-skel" style={{ height: 32, width: 32, flexShrink: 0, border: '1px solid #000' }} />
+              <div style={{ flex: 1 }}>
+                <div className="karibu-skel" style={{ height: 12, width: '40%', marginBottom: 6, border: '1px solid #000' }} />
+                <div className="karibu-skel" style={{ height: 10, width: '25%', border: '1px solid #000' }} />
+              </div>
+              <div className="karibu-skel" style={{ height: 20, width: 70, border: '1px solid #000' }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (loading) {
     return (
       <div className="min-h-[300px] flex items-center justify-center bg-white border border-black p-8 text-black gap-3 font-mono text-xs uppercase tracking-wider">
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"></span>
