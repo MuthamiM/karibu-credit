@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: [
-    "mmm.tail953a25.ts.net",
+    "technoblade.tail953a25.ts.net",
     "either-tribal-strips-online.trycloudflare.com",
   ],
   async rewrites() {

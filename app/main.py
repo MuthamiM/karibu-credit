@@ -136,3 +136,7 @@ def download_design_docx():
             filename="Karibu_Credit_Technical_Design_v1.docx"
         )
     return {"error": "File not found"}  # reload_trigger_17
+
+# Add this at the bottom of main.py, after the app instance
+from app.api.endpoints import auth
+app.include_router(auth.router, prefix="/api/v1", tags=["auth"])

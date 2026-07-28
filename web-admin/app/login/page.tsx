@@ -60,7 +60,7 @@ export default function LoginPage() {
       formData.append('password', password);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/login`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/login`,
         {
           method: 'POST',
           headers: {
@@ -103,7 +103,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/verify-otp`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/verify-otp`,
         {
           method: 'POST',
           headers: {
@@ -143,7 +143,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/forgot-password-otp`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/forgot-password-otp`,
         {
           method: 'POST',
           headers: {
@@ -180,7 +180,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/verify-otp`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/verify-otp`,
         {
           method: 'POST',
           headers: {
@@ -217,7 +217,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/auth/complete-password-change`,
+        `${process.env.NEXT_PUBLIC_API_URL || '/api/v1'}/complete-password-change`,
         {
           method: 'POST',
           headers: {

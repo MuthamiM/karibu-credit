@@ -306,7 +306,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* User card / Footer */}
           <div style={{ padding:'1rem', borderTop:'1px solid #000', flexShrink:0 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding: '0.5rem', background: '#f4f4f5', border: '1px solid #000', borderRadius: 0, marginBottom: '0.5rem' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent: collapsed ? 'center' : undefined, gap: collapsed ? 0 : '0.75rem', padding: collapsed ? '0.5rem 0' : '0.5rem', background: '#f4f4f5', border: '1px solid #000', borderRadius: 0, marginBottom: '0.5rem' }}>
               <div style={{
                 width:36, height:36, borderRadius:0, flexShrink:0,
                 background: `linear-gradient(135deg, ${roleMeta.color}, #000000)`,
